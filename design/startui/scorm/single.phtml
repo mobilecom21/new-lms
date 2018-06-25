@@ -1,0 +1,34 @@
+<div class="page-content <?php if($this->login()['userChainCount'] >0 ) { echo "padding-zero"; } ?>">
+    <div class="container-fluid">
+        <?php
+        /**
+         * @var Scorm\Model\Scorm $scorm
+         */
+        $scorm = $this->scorm;
+        $html = $this->html;
+        $landing = $this->landing;
+
+        $this->headLink()
+            ->prependStylesheet('/dist/startui/css/custom.css')
+            ->prependStylesheet('/dist/startui/css/main.css')
+            ->prependStylesheet('/dist/startui/css/lib/bootstrap/bootstrap.min.css')
+            ->prependStylesheet('/dist/startui/css/lib/font-awesome/font-awesome.min.css');
+        $this->inlineScript()
+            ->prependFile('/dist/startui/scripts/validator/magic.js')
+            ->prependFile('/dist/startui/scripts/tinymce/js/tinymce/tinymce.min.js')
+            ->prependFile('/dist/startui/js/app.js')
+            ->prependFile('/dist/startui/js/plugins.js')
+            ->prependFile('/dist/startui/js/lib/bootstrap/bootstrap.min.js')
+            ->prependFile('/dist/startui/js/lib/tether/tether.min.js')
+            ->prependFile('/dist/startui/js/lib/jquery/jquery.min.js');
+        $this->headTitle($scorm->getName());
+        ?>
+
+        <h1><?php echo $scorm->getName(); ?></h1>
+        <?php echo $scorm->getSummary(); ?>
+
+        <?php if (! empty($landing)) { ?>
+            <a target="_blank" href="/scorm/<?php echo $landing; ?>" class="btn btn-inline btn-secondary">Start</a>
+        <?php } ?>
+    </div>
+</div>

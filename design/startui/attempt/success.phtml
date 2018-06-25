@@ -1,0 +1,132 @@
+<?php
+/**
+ * @var Attempt\Model\Attempts $attempt
+ */
+$this->headLink()
+    ->prependStylesheet('/dist/startui/css/custom.css')
+    ->prependStylesheet('/dist/startui/css/main.css')
+    ->prependStylesheet('/dist/startui/css/lib/bootstrap/bootstrap.min.css')
+    ->prependStylesheet('/dist/startui/css/lib/font-awesome/font-awesome.min.css')
+    ->prependStylesheet('/dist/startui/css/separate/vendor/datatables-net.min.css')
+    ->prependStylesheet('/dist/startui/css/lib/datatables-net/datatables.min.css')
+    ->prependStylesheet('/dist/startui/css/lib/bootstrap-sweetalert/sweetalert.css')
+    ->prependStylesheet('/dist/startui/css/separate/vendor/sweet-alert-animations.min.css');
+$this->inlineScript()
+    ->prependFile('/dist/startui/scripts/validator/magic.js')
+    ->prependFile('/dist/startui/scripts/tinymce/js/tinymce/tinymce.min.js')
+    ->prependFile('/dist/startui/js/app.js')
+    ->prependFile('/dist/startui/js/lib/datatables-net/datatables.min.js')
+    ->prependFile('/dist/startui/js/plugins.js')
+    ->prependFile('/dist/startui/js/lib/bootstrap/bootstrap.min.js')
+    ->prependFile('/dist/startui/js/lib/tether/tether.min.js')
+    ->prependFile('/dist/startui/js/lib/bootstrap-sweetalert/sweetalert.min.js')
+    ->prependFile('/dist/startui/js/lib/jquery/jquery.min.js');
+$this->headTitle('Exam Attempt');
+?>
+<div class="page-content <?php if($this->login()['userChainCount'] >0 ) { echo "padding-zero"; } ?>">
+    <div class="container-fluid">
+        <?php
+        $result = $this->resultSet;
+        $attemptUserId = false;
+        $score = 0;
+
+        if(count($result) > 0) {
+            $score = $this->score;
+            $attemptUserId = $this->attempts->getStudentId();
+            $examId = $this->attempts->getExamId();
+        }
+        $coupon = $this->coupon;
+        $currentUserId = $this->identity()->getId();
+        ?>
+        <?php if (($attemptUserId != $currentUserId)) { ?>
+            <section class="card card-red mb-3">
+                <header class="card-header">
+                    Error !!
+                </header>
+                <div class="card-block">
+                    You can not access this area
+                </div>
+            </section>
+        <?php } else if ($score < 75) { ?>
+            <section class="card card-orange mb-3">
+                <header class="card-header">
+                    Error !!
+                </header>
+                <div class="card-block">
+                    You have not pass exam yet
+                </div>
+            </section>
+        <?php } else { ?>
+            <section class="card card-green mb-3">
+                <header class="card-header">
+                    Congratulation, you've passed !
+                </header>
+                <div class="card-block">
+                    <p class="card-text">You have managed achieve a score (<?php echo $score;?>%). Please download your certificate of achievement.</p>
+                    <a href="<?php echo $this->certificate;?>" class="btn btn-primary">Download certificate here</a>
+                </div>
+            </section>
+        <?php } ?>
+    </div>
+</div>
+
+<?php
+$getShowOffer = $this->usermetaTable->getMetaByName($currentUserId,'show_offer')->current();
+if($getShowOffer) {
+    $isShowOffer = $getShowOffer->getValue();
+} else {
+    $isShowOffer = "yes";
+}
+
+if (\Rbac\Role\Student::class === $this->identity()->getRole() && ($attemptUserId == $currentUserId) && $score >= 75 && $isShowOffer == 'yes' && !$this->isCertificatePaymentExist && !$this->isFreePrintCertificate) {
+
+    $linkURL = $this->url('certificate/form/payment',array('id' => $examId, 'coupon' => $coupon));
+    $offerURL = $this->url('certificate/json/showoffer');
+    $this->inlineScript()->captureStart();
+    echo <<<JS
+	if (window.performance && window.performance.navigation.type != window.performance.navigation.TYPE_BACK_FORWARD) {
+		$(document).ready(function() {
+				var linkURL = '$linkURL';
+				swal({
+					html:true,
+					title: "Congratulations!",
+					text: "<small>Well done you've now completed your course. <br/><br/>To celebrate we'd like to offer you the chance to get your personalised hard copy certificate for an all time low price of &#163;15!</small><h1 class='swal-timer-count'>10:00</h1><small>Once the timer has run out you will not be able to obtain your certificate at this lower price again.</small>",
+					type: "success",
+					showCancelButton: true,
+					cancelButtonClass: "btn-default",
+					confirmButtonText: "Buy Now",
+					confirmButtonClass: "btn-success",
+					timer: 600000
+				}, function(isConfirm) {
+						if (isConfirm === null || isConfirm == false) {
+							$.post('$offerURL');
+							swal.close();
+						} else { 
+							$.post('$offerURL', function( data ) {
+								window.location.href = linkURL;
+							});	
+						}
+				});
+			var timer2 = "10:00";
+			var interval = setInterval(function() {
+
+			  var timer = timer2.split(':');
+			  //by parsing integer, I avoid all extra string processing
+			  var minutes = parseInt(timer[0], 10);
+			  var seconds = parseInt(timer[1], 10);
+			  --seconds;
+			  minutes = (seconds < 0) ? --minutes : minutes;
+			  if (minutes < 0) clearInterval(interval);
+			  seconds = (seconds < 0) ? 59 : seconds;
+			  seconds = (seconds < 10) ? '0' + seconds : seconds;
+			  //minutes = (minutes < 10) ?  minutes : minutes;
+			  $(".sweet-alert").find(".swal-timer-count").html(minutes + ':' + seconds);
+			  timer2 = minutes + ':' + seconds;
+			}, 1000);
+		});
+	}		
+JS;
+    $this->inlineScript()->captureEnd();
+
+}
+?>

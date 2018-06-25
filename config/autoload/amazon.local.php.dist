@@ -1,0 +1,14 @@
+<?php
+
+/**
+ * AWS configuration
+ */
+
+return [
+    'aws' => [
+        'credentials' => [
+            'key'    => 'abc',
+            'secret' => '123'
+        ]
+    ]
+];

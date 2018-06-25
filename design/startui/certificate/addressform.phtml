@@ -1,0 +1,163 @@
+<?php
+$this->headLink()
+    ->prependStylesheet('/dist/startui/css/custom.css')
+    ->prependStylesheet('/dist/startui/css/main.css')
+    ->prependStylesheet('/dist/startui/css/lib/bootstrap/bootstrap.min.css')
+    ->prependStylesheet('/dist/startui/css/lib/font-awesome/font-awesome.min.css')
+    ->prependStylesheet('/dist/startui/scripts/dropzone/dropzone.css');
+$this->inlineScript()
+	->prependFile('/dist/startui/js/lib/html5-form-validation/jquery.validation.min.js')
+    //->prependFile('/dist/startui/scripts/validator/magic.js')
+    ->prependFile('/dist/startui/scripts/tinymce/js/tinymce/tinymce.min.js')
+    ->prependFile('/dist/startui/js/app.js')
+    ->prependFile('/dist/startui/js/plugins.js')
+    ->prependFile('/dist/startui/js/lib/bootstrap/bootstrap.min.js')
+    ->prependFile('/dist/startui/js/lib/tether/tether.min.js')
+    ->prependFile('/dist/startui/js/lib/jquery/jquery.min.js');
+?>
+<div class="page-content <?php if($this->login()['userChainCount'] >0 ) { echo "padding-zero"; } ?>">
+    <div class="container-fluid">
+		<section class="card box-typical-full-height">
+		<div class="card-block">
+				<?php
+				/**
+				 * @var \Zend\Form\Form $form
+				 */
+				$form = $this->form;
+				$data = $this->data;
+
+				/**
+				 * @var \Zend\Form\Element $submitElement
+				 */
+				$submitElement = $form->get('save');
+				$submitElement->setAttribute('class', 'btn-inline btn-secondary');
+
+				$form->setAttribute('action', $this->url('certificate/json/address'));
+
+				echo $this->form()->openTag($form);
+				if ($form->get('id')->getValue()) {
+					$this->headTitle('Edit Address');
+					echo '<h3>Edit Address</h3>';
+
+				} else {
+					$this->headTitle('Add Address');
+					echo '<h4>Add Address</h4>';
+				}
+				
+				echo "<p>Please fill address below to where certificate will be sent !</p>";
+
+				$notice = '';
+				$notice = $data['notice'];
+
+				echo "<p>".$notice."</p>";
+
+				$countries = array();
+				foreach ($this->countries as $country) {
+					$countries[$country['id']] = $country['name'];
+				}
+				//var_dump($countries);
+				
+				if ($form->get('country_id')->getValue()) {
+					$states = array();
+					foreach ($this->states as $state) {
+						if ($form->get('country_id')->getValue() == $state['country_id']) {
+							$states[$state['id']] = $state['name'];
+						}
+					}
+					$form->get('state_id')->setValueOptions($states);
+				}
+
+				$form->get('country_id')->setValueOptions($countries);
+
+				$form->get('address')->setAttribute('data-validation','[NOTEMPTY]');
+				$form->get('city')->setAttribute('data-validation','[NOTEMPTY]');		
+				$form->get('postal_code')->setAttribute('data-validation','[NOTEMPTY]');
+				$form->get('postal_code')->setAttribute('data-validation-label','Post Code');
+
+				$form->get('phone')->setAttribute('data-validation','[NOTEMPTY]');
+				$form->get('state_id')->setAttribute('data-validation','[NOTEMPTY]');
+				$form->get('state_id')->setAttribute('data-validation-label','State');
+				
+				$form->get('country_id')->setAttribute('data-validation','[NOTEMPTY]');
+				$form->get('country_id')->setAttribute('data-validation-label','Country');
+				
+				?>
+				<div class="row">
+					<div class="col-lg-6">
+					<?php
+					echo $this->formRow($form->get('exam_id'));
+					echo $this->formRow($form->get('id'));
+					echo $this->formRow($form->get('user_id'));
+					echo $this->formRow($form->get('coupon'));
+					echo $this->twbsFormRow($form->get('address'));
+					echo $this->twbsFormRow($form->get('address2'));
+					echo $this->twbsFormRow($form->get('city'));
+					echo $this->twbsFormRow($form->get('postal_code'));
+					?>
+					</div>
+					<div class="col-lg-6">
+					<?php
+					echo $this->twbsFormRow($form->get('country_id'));
+					echo $this->twbsFormRow($form->get('state_id'));
+					echo $this->twbsFormRow($form->get('phone'));
+					echo '<br/>';
+					echo $this->twbsFormRow($submitElement);
+					?>
+					</div>
+				</div>
+				<?php
+					echo $this->form()->closeTag();
+				?>
+
+		</div><!--- endd card -->
+		</section>
+    </div>
+</div>
+<?php
+$jsonURL = $this->url('certificate/json/state');
+$this->inlineScript()->captureStart();
+echo <<<JS
+	$(function() {
+		$('select[name=country_id]').on('change', function() {
+			var countryId = this.value;
+			$.post('$jsonURL',{ id: countryId }, function(data) {
+				$('select[name=state_id]').html(data);
+			});
+		});
+		$('#certificateaddress').validate({
+			submit: {
+				settings: {
+					inputContainer: '.form-group',
+					errorListClass: 'error-list'
+				},
+				callback: {
+					onSubmit: function(node, formData) {
+						
+						console.log('#' + node[0].action + ' has a submit override.');
+						console.log(formData);
+	 
+						//node[0].submit();
+
+						$.ajax({
+							type: 'POST',
+							data: formData,
+							url: node[0].action,
+							dataType: 'json',
+							success: function ( response, textStatus, jqxhr ) {	 
+								if (!response.status) {	 	 
+									//console.log(response.redirectTo);
+									window.location = response.redirectTo;
+									return false;	 
+								} 	 
+							}
+						});
+
+					}
+				}
+			}
+		});
+
+	});
+JS;
+$this->inlineScript()->captureEnd();
+?>

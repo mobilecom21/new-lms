@@ -1,0 +1,179 @@
+<?php
+/**
+ * @var User\Model\User $user
+ */
+$user = $this->user;
+
+$this->headLink()
+    ->prependStylesheet('/dist/startui/css/custom.css')
+    ->prependStylesheet('/dist/startui/css/main.css')
+    ->prependStylesheet('/dist/startui/css/lib/bootstrap/bootstrap.min.css')
+    ->prependStylesheet('/dist/startui/css/lib/font-awesome/font-awesome.min.css')
+    ->prependStylesheet('/dist/startui/css/separate/vendor/datatables-net.min.css')
+    ->prependStylesheet('/dist/startui/css/lib/datatables-net/datatables.min.css');
+$this->inlineScript()
+    ->prependFile('/dist/startui/scripts/validator/magic.js')
+    ->prependFile('/dist/startui/scripts/tinymce/js/tinymce/tinymce.min.js')
+    ->prependFile('/dist/startui/js/app.js')
+    ->prependFile('/dist/startui/js/lib/datatables-net/datatables.min.js')
+    ->prependFile('/dist/startui/js/plugins.js')
+    ->prependFile('/dist/startui/js/lib/bootstrap/bootstrap.min.js')
+    ->prependFile('/dist/startui/js/lib/tether/tether.min.js')
+    ->prependFile('/dist/startui/js/lib/jquery/jquery.min.js');
+$this->headTitle($user->getFirstName() . ' ' . $user->getLastName());
+
+$assignmentWorkResultSet = $this->assignmentWorkResultSet;
+?>
+
+<?php
+$this->inlineScript()->captureStart();
+echo <<<JS
+    (function ($) {
+        $('#submissions-table').DataTable({'aaSorting': []});
+    })(jQuery);
+JS;
+$this->inlineScript()->captureEnd();
+?>
+
+<div class="page-content <?php if($this->login()['userChainCount'] >0 ) { echo "padding-zero"; } ?>">
+    <div class="container-fluid">
+        <div class="panel panel-default">
+            <p>
+
+                <?php if (\Rbac\Role\Administrator::class === $this->identity()->getRole() || \Rbac\Role\Administrator::class == $this->login()['topLevelRole']) { ?>
+                <form method='GET' class='inline-block' action='<?php echo $this->url('user/form/loginas', ['userId' => $user->getId()]); ?>'>
+                    <button type="submit" class="btn btn-inline btn-secondary">Login as this user</button>
+                </form>
+                <?php } ?>
+
+                <a class="btn btn-inline btn-secondary" href="<?php echo $this->url('message/form/mail', ['userId' => $user->getId()]); ?>">Contact</a>
+
+                <a class="btn btn-inline btn-secondary" href="<?php echo $this->url('student/logs', ['id' => $user->getId()]); ?>">Logs</a>
+
+            </p>
+            <table class="table">
+                <thead>
+                <tr>
+                    <th>First Name</th>
+                    <th>Last Name</th>
+                    <th>Username</th>
+                    <th>Email</th>
+                    <th>Phone</th>
+                    <th></th>
+                </tr>
+                </thead>
+                <tbody>
+                <tr>
+                    <td><?php echo $user->getFirstName(); ?></td>
+                    <td><?php echo $user->getLastName(); ?></td>
+                    <td><?php echo $user->getUsername(); ?></td>
+                    <td><?php echo $user->getIdentity(); ?></td>
+                    <td><?php echo $user->getPhone(); ?></td>
+                    <td>
+                        <?php if (\Rbac\Role\Administrator::class === $this->identity()->getRole()) { ?>
+                            <a class="btn btn-inline btn-secondary" href="<?php echo $this->url('student/form/student', ['id' => $user->getId()]); ?>">Edit</a>
+                        
+
+                        <form method='POST' action='/user/resendemail'>
+                            <input type='hidden' name='id' value='<?php echo $user->getId(); ?>'>
+                            <button type="submit" class="btn btn-inline btn-secondary">Resend email</button>
+                        </form>
+
+                        <?php } ?>
+
+
+
+                        </td>
+                </tr>
+                </tbody>
+            </table>
+        </div>
+
+        <?php if (count($this->courses) > 0) { ?>
+            <br><br>
+            <div class="panel panel-default">
+                <table class="table">
+                    <thead>
+                    <tr>
+                        <th>Course Name</th>
+                        <th>Modules</th>
+                        <th>End of Support</th>
+                        <th>Download Assets</th>
+                    </tr>
+                    </thead>
+                    <tbody>
+                    <?php foreach ($this->courses ?? [] as $course) { 
+                        //don't show a download link if there's no work submitted
+                        $status = false;
+                    ?>
+                        <tr>
+                            <td><?php echo $course['name']; ?></td>
+                            <td>
+                                <?php foreach ($course['modules'] ?? [] as $module) { ?>
+                                    <button type="button" class="btn btn-rounded btn-inline btn-sm <?php echo $module['status']; ?>"><?php echo $module['name']; ?></button>
+                                    <span></span>
+                                    <?php
+                                    if(!$status && $module['status'] != 'btn-secondary') {
+                                        $status = true;
+                                    }
+                                } ?>
+                            </td>
+                            <td style="width: 150px;"><?php echo $course['end_of_support']; ?></td>
+                            <td><?php if($status) { ?>
+                                <a class="btn btn-inline btn-secondary" href="<?php echo $this->url('assignment/coursefiles', ['userId' => $user->getId(), 'courseId' => $course['course_id']]); ?>">Download</a><?php
+                            }
+                                ?></td>
+                        </tr>
+                    <?php } ?>
+                    </tbody>
+                </table>
+            </div>
+        <?php } ?>
+
+        <?php if (count($assignmentWorkResultSet) > 0) { ?>
+        <br><br>
+        <div class="panel panel-default">
+            <div class="panel-heading"><a class="btn btn-inline btn-secondary" href="<?php echo $this->url('assignment/files', ['userId' => $user->getId()]); ?>">Download All Submissions</a></div>
+            <table id="submissions-table" class="table">
+                <thead>
+                <tr>
+                    <th>Date</th>
+                    <th>Course</th>
+                    <th>Module</th>
+                    <th>Status</th>
+                    <th>Action</th>
+                </tr>
+                </thead>
+                <tbody>
+                <?php foreach ($assignmentWorkResultSet as $assignmentWork) { ?>
+                    <tr>
+                        <td><?php echo $assignmentWork->createdAt()->format('F j, Y, g:i a'); ?></td>
+                        <td><?php echo $assignmentWork->course()->getName(); ?></td>
+                        <td><?php echo $assignmentWork->topic()->getName(); ?></td>
+                        <td><?php
+                            if ($assignmentWork->isWaitingToPass()) {
+                                echo 'Not Marked';
+                            } else if ($assignmentWork->didNotPass()) {
+                                echo 'Referred ' . $assignmentWork->updatedAt()->format('F j, Y, g:i a');
+                            } else if ($assignmentWork->hasPassed()) {
+                                echo 'Passed ' . $assignmentWork->updatedAt()->format('F j, Y, g:i a');
+                            }
+                            ?></td>
+                        <td>
+                            <a href="<?php echo $this->url('uploader/download', [
+                                'key' => $assignmentWork->assignmentUploader()->getUniqueKey()
+                            ]); ?>" class="btn btn-inline btn-secondary">Download</a>
+                            <?php if (null !== $assignmentWork->feedbackUploader()) { ?>
+                                <a href="<?php echo $this->url('uploader/download', [
+                                    'key' => $assignmentWork->feedbackUploader()->getUniqueKey()
+                                ]); ?>" class="btn btn-inline btn-secondary">Download Feedback</a>
+                            <?php } ?>
+                        </td>
+                    </tr>
+                <?php } ?>
+                </tbody>
+            </table>
+        </div>
+        <?php } ?>
+    </div>
+</div>

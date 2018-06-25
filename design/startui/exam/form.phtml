@@ -1,0 +1,120 @@
+<?php
+$this->headLink()
+    ->prependStylesheet('/dist/startui/css/custom.css')
+    ->prependStylesheet('/dist/startui/css/main.css')
+    ->prependStylesheet('/dist/startui/css/lib/bootstrap/bootstrap.min.css')
+    ->prependStylesheet('/dist/startui/css/lib/font-awesome/font-awesome.min.css')
+    ->prependStylesheet('/dist/startui/scripts/dropzone/dropzone.css');
+$this->inlineScript()
+    ->prependFile('/dist/startui/scripts/validator/magic.js')
+    ->prependFile('/dist/startui/scripts/dropzone/dropzone.js')
+    ->prependFile('/dist/startui/scripts/tinymce/js/tinymce/tinymce.min.js')
+    ->prependFile('/dist/startui/js/app.js')
+    ->prependFile('/dist/startui/js/plugins.js')
+    ->prependFile('/dist/startui/js/lib/bootstrap/bootstrap.min.js')
+    ->prependFile('/dist/startui/js/lib/tether/tether.min.js')
+    ->prependFile('/dist/startui/js/lib/jquery/jquery.min.js');
+?>
+    <div class="page-content <?php if($this->login()['userChainCount'] >0 ) { echo "padding-zero"; } ?>">
+        <div class="container-fluid">
+            <?php
+            /**
+             * @var \Zend\Form\Form $form
+             */
+            $form = $this->form;
+
+            /**
+             * @var \Zend\Form\Element $submitElement
+             */
+            $submitElement = $form->get('submit');
+            $submitElement->setAttribute('class', 'btn-inline btn-secondary');
+
+            $form->setAttribute('action', $this->url('exam/post/exam'));
+
+            echo $this->form()->openTag($form);
+            if ($form->get('id')->getValue()) {
+                $this->headTitle('Edit Exam');
+                echo '<h3>Edit Exam</h3>';
+            } else {
+                $this->headTitle('Add File');
+                echo '<h4>Add Exam</h4>';
+            }
+            echo $this->formRow($form->get('courseId'));
+            echo $this->formRow($form->get('adminId'));
+            echo $this->formRow($form->get('parentId'));
+            echo $this->formRow($form->get('id'));
+            echo $this->formRow($form->get('uploads'));
+            echo $this->twbsFormRow($form->get('name'));
+            echo '<div class="form-group"><label>Upload File</label><div class="dropzone"></div></div>';
+            echo $this->twbsFormRow($submitElement);
+            echo $this->form()->closeTag();
+            ?>
+        </div>
+    </div>
+
+<?php
+$this->inlineScript()->captureStart();
+echo <<<JS
+    (function ( $ ) {
+        var uploadsInput = $('input[name="uploads"]');
+        var idInput = $('input[name="id"]');
+        Dropzone.autoDiscover = false;
+        var myDropzoneOptions = {
+            url: '/uploader/upload',
+            maxFiles: 1,
+            addRemoveLinks: true,
+			acceptedFiles: '.csv'
+        };
+        var myDropzone = new Dropzone('.dropzone', myDropzoneOptions);
+        var uploads = $(uploadsInput).val();
+        if(uploads.length) {
+            $.ajax({
+              type: 'POST',
+                url: '/uploader/get',
+                data: 'uploads=' + uploads
+            }).done(function(data) {
+                $.each(data, function(key,value){
+                    var mockFile = {uploadId: value.id, name: value.name, size: value.size, accepted: true};
+                    myDropzone.emit('addedfile', mockFile);
+                    myDropzone.emit('thumbnail', mockFile, '/dist/startui/images/excel-icon.png');
+                    myDropzone.emit('complete', mockFile);
+                    myDropzone.files.push(mockFile);
+                });
+            });
+        }
+        myDropzone.on('success', function (file, response) {
+            file.uploadId = response.id;
+            var uploads = $(uploadsInput).val();
+            if(uploads.length) {
+                uploads = JSON.parse(uploads);
+            } else {
+                uploads = {};
+            }
+            uploads[response.id] = response.id;
+            uploads = JSON.stringify(uploads);
+            $(uploadsInput).val(uploads);
+        });
+        myDropzone.on('addedfile', function (file) {
+            myDropzone.emit("thumbnail", file, '/dist/startui/images/excel-icon.png');
+        });
+        myDropzone.on('removedfile', function (file) {
+            if(file.uploadId) {
+                if (0 === $(idInput).length) {
+                    $.ajax({
+                        type: 'POST',
+                        url: '/uploader/delete',
+                        data: 'id=' + file.uploadId
+                    });    
+                }
+                var uploads = $(uploadsInput).val();
+                if(uploads.length) {
+                    uploads = JSON.parse(uploads);
+                    delete uploads[file.uploadId];
+                    uploads = JSON.stringify(uploads);
+                    $(uploadsInput).val(uploads);
+                }
+            }
+        });
+    })(jQuery);
+JS;
+$this->inlineScript()->captureEnd();

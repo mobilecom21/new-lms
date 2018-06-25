@@ -1,0 +1,102 @@
+<?php
+/**
+ * @var Course\Model\Course $course
+ */
+$this->headTitle('My Courses');
+$this->headLink()
+    ->prependStylesheet('/dist/startui/css/custom.css')
+    ->prependStylesheet('/dist/startui/css/main.css')
+    ->prependStylesheet('/dist/startui/css/lib/bootstrap/bootstrap.min.css')
+    ->prependStylesheet('/dist/startui/css/lib/font-awesome/font-awesome.min.css')
+    ->prependStylesheet('/dist/startui/scripts/dropzone/dropzone.css')
+    ->prependStylesheet('/dist/startui/css/separate/vendor/datatables-net.min.css')
+    ->prependStylesheet('/dist/startui/css/lib/datatables-net/datatables.min.css');
+$this->inlineScript()
+    ->prependFile('/dist/startui/scripts/validator/magic.js')
+    ->prependFile('/dist/startui/js/app.js')
+    ->prependFile('/dist/startui/js/lib/datatables-net/datatables.min.js')
+    ->prependFile('/dist/startui/js/plugins.js')
+    ->prependFile('/dist/startui/js/lib/bootstrap/bootstrap.min.js')
+    ->prependFile('/dist/startui/js/lib/tether/tether.min.js')
+    ->prependFile('/dist/startui/js/lib/jquery/jquery.min.js');
+?>
+<div class="page-content <?php if($this->login()['userChainCount'] > 0 ) { echo "padding-zero"; } ?>">
+    <div class="container-fluid">
+        <?php
+            if (\Rbac\Role\Administrator::class === $this->identity()->getRole()) {
+                echo '<p><a href="' . $this->url('course/form/course') . '" class="btn btn-inline btn-secondary">Add New Course</a>';
+                echo '<a href="' . $this->url('course/view/resultset', ['filter' => 'archived']) . '" class="btn btn-inline btn-secondary">Archived</a></p>';
+            }
+        ?>
+
+        <?php 
+            if (\Rbac\Role\Administrator::class === $this->identity()->getRole()) { ?>
+                <p>
+                    <form action="<?php echo $this->url(); ?>" method="GET">
+                        <select name="tutor" class="form-control" onchange="this.form.submit()">
+                            <option value=""></option>
+                            <?php foreach ($this->tutorResultSet as $tutor) { ?>
+                                <option value="<?php echo $tutor->getId(); ?>" <?php
+                                echo $tutor->getId() === $this->selectedTutor ? 'selected' : ''; ?>>
+                                    <?php
+                                    $first_name = $last_name = '';
+                                    if (isset($this->tutorsMeta[$tutor->getId()]) && is_array($tutorsMeta[$tutor->getId()])) {
+                                        foreach($tutorsMeta[$tutor->getId()] as $userMeta) {
+                                            if ('first_name' == $userMeta['name']) {
+                                                $first_name = $userMeta['value'];
+                                            } elseif ('last_name' == $userMeta['name']) {
+                                                $last_name = $userMeta['value'];
+                                            }
+                                        }
+                                    }
+                                    echo $first_name . ' ' . $last_name;
+                                    ?>
+                                </option>
+                            <?php } ?>
+                        </select>
+                    </form>
+                </p>
+            <?php } ?>
+
+
+        <?php if (0 == count($this->resultSet)) { ?>
+            No courses assigned yet.
+        <?php } else { ?>
+        <table id="course-table" class="display table table-striped table-bordered" cellspacing="0" width="100%">
+            <thead>
+            <tr>
+                <th>Name</th>
+                <?php if (\Rbac\Role\Administrator::class === $this->identity()->getRole()) { ?>
+                    <th></th>
+                <?php } ?>
+            </tr>
+            </thead>
+            <tbody>
+            <?php foreach ($this->resultSet ?? [] as $course) { ?>
+                <?php echo $this->render('course::resultset/one', ['course' => $course, 'archived' => $this->archived, 'singleRouteName' => $this->singleRouteName ?? 'course/view/single' ]); ?>
+            <?php } ?>
+            </tbody>
+        </table>
+        <?php } ?>
+    </div><!--.container-fluid-->
+</div><!--.page-content-->
+<?php
+if (\Rbac\Role\Administrator::class === $this->identity()->getRole()) {
+$this->inlineScript()->captureStart();
+echo <<<JS
+    (function ( $ ) {
+        $('#course-table').DataTable({'aaSorting': []});
+        $(document).on('click', '.archive-course', function() {
+            $.get('/course/archive/' + $(this).attr('data-id'), function( data ) {
+                location.reload();
+            });
+        });
+        $(document).on('click', '.restore-course', function() {
+            $.get('/course/restore/' + $(this).attr('data-id'), function( data ) {
+                location.reload();
+            });
+        });
+    })(jQuery);
+JS;
+$this->inlineScript()->captureEnd();
+}

@@ -1,0 +1,88 @@
+<?php
+/**
+ * @var Topic\Model\Topic $topic
+ * @var Topic\Model\Attachment $attachment
+ */
+$topic = $this->topic;
+
+
+$formLinks = [
+    '<a class="btn btn-inline btn-secondary" href="' . $this->url('topic/form/topic', ['parentId' => $this->parentId, 'id' => $topic->getId()]) . '">Edit</a>'
+];
+
+/**
+ * Attachment Form
+ */
+$invokables = $this->sharedAttachmentLinkForm();
+foreach ($invokables as $invokable) {
+    $link = $invokable($topic->getId());
+    $popupLinks[] = '<a class="dropdown-item" href="' . $link['href'] . '">' . $link['label'] . '</a>';
+}
+
+/**
+ * Attachment Single
+ */
+$invokables = $this->sharedAttachmentSingle();
+$attachments = [];
+foreach ($this->attachments as $attachment) {
+    $invokable = $invokables[$attachment->getAttachment()] ?? null;
+    if (is_callable($invokable)) {
+        $attachments[] = $invokable($topic->getId(), $attachment->getAttachmentId());
+    }
+}
+
+$attachmentLinks = [];
+foreach ($attachments as $single) {
+    $type = $single['type'] ?? '';
+    $target = '';
+    $editGroup = '<span class="dropdown activity-dropdown">' .
+                '<span class="btn btn-inline dropdown-toggle" type="button" data-toggle="dropdown" aria-haspopup="true" aria-expanded="true"> Edit <span class="caret"></span> </span>' .
+                '<ul class="dropdown-menu"><li><a class="dropdown-item" href="' . $single['form']['href'] . '">Edit settings</a></li>' .
+                '<li><a class="dropdown-item delete-topic-item" href="#" data-id="' . $single['id'] . ' " data-type="/' . $type . '">Delete</a></li></ul></span>';
+    $attachmentLink = '<div class="topic-row"><div class="col-xs-6">';
+    $target = '';
+    if ('assignment' == $type) {
+        $attachmentLink .= '<i class="topic-icon fa fa-check-square" aria-hidden="true"></i>';
+    } elseif ('scorm' == $type) {
+        $attachmentLink .= '<i class="topic-icon fa fa-th" aria-hidden="true"></i>';
+    } elseif ('file' == $type) {
+        $target = 'target="_blank"';
+        $target = 'target="_blank"';
+        $attachmentLink .= '<i class="topic-icon fa fa-file" aria-hidden="true"></i>';
+    } elseif ('exam' == $type) {
+        $attachmentLink .= '<i class="topic-icon fa fa-tasks" aria-hidden="true"></i>';
+    }
+    $attachmentLink .= '<a ' . $target . 'href="' . $single['href'] . '" style="color:red">' . $single['name'] . '</a>' . $editGroup . '</div></div>';
+    $attachmentLinks[] = $attachmentLink;
+}
+?>
+
+<?php
+foreach ($formLinks as $formLink) {
+    echo $formLink . '<br>';
+}
+?>
+
+<h3><?php echo $topic->getName(); ?></h3>
+<p><?php echo $topic->getSummary(); ?></p>
+
+<?php
+foreach ($attachmentLinks as $attachmentLink) {
+    echo $attachmentLink;
+}
+?>
+
+<div class="dropdown activity-dropdown">
+    <span class="btn btn-inline dropdown-toggle" type="button" id="activity-dropdown-<?php echo $topic->getId(); ?>" data-toggle="dropdown" aria-haspopup="true" aria-expanded="true">
+        Add an activity or resource
+        <span class="caret"></span>
+    </span>
+    <ul class="dropdown-menu dropdown-menu-right" aria-labelledby="activity-dropdown-<?php echo $topic->getId(); ?>">
+        <?php
+        foreach ($popupLinks as $popupLink) {
+            echo '<li>' . $popupLink . '</li>';
+        }
+        ?>
+    </ul>
+</div>
+

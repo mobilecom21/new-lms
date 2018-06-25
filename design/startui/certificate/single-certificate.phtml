@@ -1,0 +1,159 @@
+<?php
+/**
+ * @var Attempt\Model\Attempts $attempt
+ */
+$this->headLink()
+    ->prependStylesheet('/dist/startui/css/custom.css')
+    ->prependStylesheet('/dist/startui/css/main.css')
+    ->prependStylesheet('/dist/startui/css/lib/bootstrap/bootstrap.min.css')
+    ->prependStylesheet('/dist/startui/css/lib/font-awesome/font-awesome.min.css')
+    ->prependStylesheet('/dist/startui/css/separate/vendor/datatables-net.min.css')
+    ->prependStylesheet('/dist/startui/css/lib/datatables-net/datatables.min.css');
+$this->inlineScript()
+    ->prependFile('/dist/startui/scripts/validator/magic.js')
+    ->prependFile('/dist/startui/scripts/tinymce/js/tinymce/tinymce.min.js')
+    ->prependFile('/dist/startui/js/app.js')
+    ->prependFile('/dist/startui/js/lib/datatables-net/datatables.min.js')
+    ->prependFile('/dist/startui/js/plugins.js')
+    ->prependFile('/dist/startui/js/lib/bootstrap/bootstrap.min.js')
+    ->prependFile('/dist/startui/js/lib/tether/tether.min.js')
+    ->prependFile('/dist/startui/js/lib/jquery/jquery.min.js');
+$this->headTitle('Certificate');
+?>
+
+<?php
+
+function titleCase($string) 
+{
+	$word_splitters = array(' ', '-', "O'", "L'", "D'", 'St.', 'Mc');
+	$lowercase_exceptions = array('the', 'van', 'den', 'von', 'und', 'der', 'de', 'da', 'of', 'and', "l'", "d'");
+	$uppercase_exceptions = array('III', 'IV', 'VI', 'VII', 'VIII', 'IX');
+ 
+	$string = strtolower($string);
+	foreach ($word_splitters as $delimiter)
+	{ 
+		$words = explode($delimiter, $string); 
+		$newwords = array(); 
+		foreach ($words as $word)
+		{ 
+			if (in_array(strtoupper($word), $uppercase_exceptions))
+				$word = strtoupper($word);
+			else
+			if (!in_array($word, $lowercase_exceptions))
+				$word = ucfirst($word); 
+ 
+			$newwords[] = $word;
+		}
+ 
+		if (in_array(strtolower($delimiter), $lowercase_exceptions))
+			$delimiter = strtolower($delimiter);
+ 
+		$string = join($delimiter, $newwords); 
+	} 
+	return $string; 
+}
+
+	$certificate = $this->certificate;
+	$usermeta = $this->user;
+
+	foreach ($usermeta as $meta) {
+		$user_details[$meta->getName()] = $meta->getValue();
+	}
+	$studentname = titleCase($user_details['first_name'].' '.$user_details['last_name']);
+	$coursename = $this->course->getName();
+	$topicname = $this->topic->getName();
+	$date = $this->date;
+	$score = $certificate->getScore();
+
+    $imgBase64 = '';
+    $imgPath = 'config/certificate.jpg';
+    if(file_exists($imgPath)) {
+        $imgData = file_get_contents($imgPath);
+        $imgBase64 = 'data:image/jpg;base64,' . base64_encode($imgData);
+    }
+?>
+<div class="page-content <?php if($this->login()['userChainCount'] >0 ) { echo "padding-zero"; } ?>">
+    <div class="container-fluid">
+		<?php if ($this->score < 75) { ?>
+        <section class="card card-red mb-3">
+			<header class="card-header">
+				Error !!
+			</header>
+			<div class="card-block">
+				You can not access this area
+			</div>
+		</section>
+		<?php } ?>
+    </div>
+</div>
+
+<?php
+$this->inlineScript()->captureStart();
+echo <<<JS
+	
+	if ($this->score > 75) {
+	var docDefinition = { 
+		content: [
+			{
+				stack: [{ text: '$studentname', alignment: 'left' }],
+				style: 'studentname'
+			},
+			{	
+				stack: [{ text: '$coursename', alignment: 'left' }],
+				style: 'coursename'
+			},
+			{	
+				stack: [{ text: '$score %', alignment: 'left' }],
+				style: 'score'
+			},
+			{	
+				stack: [{ text: '$date', alignment: 'left' }],
+				style: 'datestyle'
+			}
+		],
+		styles: {
+			studentname: {
+				fontSize: 30,
+				bold: true,
+				margin: [48, 300, 0, 70],
+				color: '#4a494a'
+			},
+			coursename: {
+				fontSize: 24,
+				bold: true,
+				margin: [48, 0, 0, 3],
+				color: '#4a494a'
+			},
+			score: {
+				fontSize: 13,
+				bold: false,
+				margin: [179, 0, 0, 195],
+				color: '#4a494a'
+			},
+			datestyle: {
+				fontSize: 13,
+				bold: false,
+				margin: [160, 0, 0, 0],
+				color: '#4a494a'
+			}
+		},
+		pageSize: 'A4',
+		pageOrientation: 'portrait',
+		background: function(page) {
+			return [{
+				image: '{$imgBase64}',
+				width: 600
+			}];
+		}
+	};
+	// open the PDF in a new window
+	//pdfMake.createPdf(docDefinition).open();
+	// print the PDF
+	//pdfMake.createPdf(docDefinition).print();
+	// download the PDF
+	pdfMake.createPdf(docDefinition).download('$coursename'+' certificate.pdf');
+	}
+	history.back();
+JS;
+$this->inlineScript()->captureEnd();
+?>

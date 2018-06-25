@@ -1,0 +1,88 @@
+<?php
+$this->headTitle('Home');
+$this->headLink()
+    ->prependStylesheet('/dist/startui/css/custom.css')
+    ->prependStylesheet('/dist/startui/css/main.css')
+    ->prependStylesheet('/dist/startui/css/lib/bootstrap/bootstrap.min.css')
+    ->prependStylesheet('/dist/startui/css/lib/font-awesome/font-awesome.min.css')
+    ->prependStylesheet('/dist/startui/scripts/dropzone/dropzone.css')
+    ->prependStylesheet('/dist/startui/css/lib/bootstrap-sweetalert/sweetalert.css')
+    ->prependStylesheet('/dist/startui/css/separate/vendor/sweet-alert-animations.min.css');
+$this->inlineScript()
+    ->prependFile('/dist/startui/js/app.js')
+    ->prependFile('/dist/startui/js/plugins.js')
+    ->prependFile('/dist/startui/js/lib/bootstrap/bootstrap.min.js')
+    ->prependFile('/dist/startui/js/lib/tether/tether.min.js')
+    ->prependFile('/dist/startui/js/lib/bootstrap-sweetalert/sweetalert.min.js')
+    ->prependFile('/dist/startui/js/lib/jquery/jquery.min.js');
+?>
+<div class="page-content <?php if($this->login()['userChainCount'] >0 ) { echo "padding-zero"; } ?>">
+    <div class="container-fluid">
+        <div class="row">
+            <div class="col-xl-7">
+                <section id="blockui-element-container-default" class="card">
+                    <header class="card-header welcome-heading">
+                        <?php
+                            $site_name = '';
+                            foreach ($this->options as $option) {
+                                if ('site_name' == $option['name']) {
+                                    $site_name = $option['value'];
+                                    break;
+                                }
+                            }
+                        ?>
+                        Welcome to the <?php echo $site_name; ?> dashboard
+                    </header>
+                    <div class="card-block display-table" style="min-height: 300px">
+                        <?php
+                            if (\Rbac\Role\Administrator::class === $this->identity()->getRole()) {
+                                $welcomeKey = 'admin_welcome_message';
+                            } elseif (\Rbac\Role\Tutor::class === $this->identity()->getRole()) {
+                                $welcomeKey = 'tutor_welcome_message';
+                            } elseif (\Rbac\Role\Student::class === $this->identity()->getRole()) {
+                                $welcomeKey = 'student_welcome_message';
+                            }
+                            if (! empty($welcomeKey)) {
+                                foreach ($this->options as $option) {
+                                    if ($welcomeKey == $option['name']) {
+                                        echo $option['value'];
+                                        break;
+                                    }
+                                }
+                            }
+                        ?>
+                    </div>
+                </section>
+            </div>
+            <div class="col-xl-5 dahsboard-column notification-area">
+                <?php if (\Rbac\Role\Student::class !== $this->identity()->getRole()) { ?>
+                    <section class="box-typical box-typical-dashboard panel panel-default scrollable">
+                        <header class="box-typical-header panel-heading">
+                            <h3 class="panel-title">Activity</h3>
+                        </header>
+                        <div class="box-typical-body panel-body">
+                            <table class="tbl-typical">
+                                <?php if (count($this->activity) > 0) { ?>
+                                    <tr>
+                                        <th><div>Subject</div></th>
+                                        <th align="center"><div>Date</div></th>
+                                    </tr>
+                                <?php } ?>
+                                <tr>
+                                    <td>Welcome to <?php echo $site_name; ?>, notifications will show here</td><td></td>
+                                </tr>
+                                <?php foreach ($this->activity ?? [] as $notification) { ?>
+                                    <tr>
+                                        <td><?php echo $notification->getText()->text; ?></td>
+                                        <td class="color-blue-grey" nowrap align="center"><?php echo $notification->getCreatedAt()->format('F j, Y, g:i a'); ?></td>
+                                    </tr>
+                                <?php } ?>
+                            </table>
+                        </div><!--.box-typical-body-->
+                    </section><!--.box-typical-dashboard-->
+                <?php } ?>
+            </div>
+
+        </div>
+    </div><!--.container-fluid-->
+</div><!--.page-content-->

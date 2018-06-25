@@ -1,0 +1,72 @@
+<?php
+$this->headTitle('Reset Password');
+$this->headLink()
+    ->prependStylesheet('/dist/startui/css/main.css')
+    ->prependStylesheet('/dist/startui/css/lib/bootstrap/bootstrap.min.css')
+    ->prependStylesheet('/dist/startui/css/lib/font-awesome/font-awesome.min.css')
+    ->prependStylesheet('/dist/startui/css/separate/pages/login.min.css');
+
+$this->inlineScript()
+    ->prependFile('/dist/startui/scripts/validator/magic.js')
+    ->prependFile('/dist/startui/js/app.js')
+    ->prependFile('/dist/startui/js/lib/match-height/jquery.matchHeight.min.js')
+    ->prependFile('/dist/startui/js/plugins.js')
+    ->prependFile('/dist/startui/js/lib/bootstrap/bootstrap.min.js')
+    ->prependFile('/dist/startui/js/lib/tether/tether.min.js')
+    ->prependFile('/dist/startui/js/lib/jquery/jquery.min.js');
+?>
+
+<?php
+/**
+ * @var \Zend\Form\Form $form
+ */
+$form = $this->form;
+?>
+
+<div class="page-center">
+    <div class="page-center-in">
+        <div class="container-fluid">
+            <?php
+                $form->setAttribute('action', $this->url('user/post/reset'));
+                $form->setAttribute('class', 'sign-box');
+            ?>
+            <?php echo $this->form()->openTag($form); ?>
+            <form class="sign-box">
+                <div class="sign-avatar">
+                    <img src="/dist/startui/img/logo.png" alt="">
+                </div>
+                <header class="sign-title">Reset Password</header>
+                <div class="form-group">
+                    <?php echo $this->twbsFormRow($form->get('identity')->setAttribute('placeholder', 'E-Mail or Username')->setLabel('')); ?>
+                </div>
+                <div class="form-group text-center">
+                    <a href="<?php echo $this->url('user/form/login'); ?>">Go back to login form</a>
+                </div>
+                <button type="submit" class="btn btn-rounded">Reset</button>
+            <?php echo $this->form()->closeTag(); ?>
+        </div>
+    </div>
+</div><!--.page-center-->
+
+<?php
+
+$this->inlineScript()->captureStart();
+echo <<<JS
+    (function ( $ ) {
+        $(function() {
+            $('.page-center').matchHeight({
+                target: $('html')
+            });
+
+            $(window).resize(function(){
+                setTimeout(function(){
+                    $('.page-center').matchHeight({ remove: true });
+                    $('.page-center').matchHeight({
+                        target: $('html')
+                    });
+                },100);
+            });
+        });
+    })(jQuery);
+JS;
+$this->inlineScript()->captureEnd();

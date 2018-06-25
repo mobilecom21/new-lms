@@ -1,0 +1,80 @@
+<div class="page-content <?php if($this->login()['userChainCount'] >0 ) { echo "padding-zero"; } ?>">
+    <div class="container-fluid">
+        <?php
+        /**
+         * @var Course\Model\Content $content
+         * @var Course\Model\Course $course
+         */
+
+        $this->headLink()
+            ->prependStylesheet('/dist/startui/css/custom.css')
+            ->prependStylesheet('/dist/startui/css/main.css')
+            ->prependStylesheet('/dist/startui/css/lib/bootstrap/bootstrap.min.css')
+            ->prependStylesheet('/dist/startui/css/lib/font-awesome/font-awesome.min.css')
+            ->prependStylesheet('/dist/startui/scripts/dropzone/dropzone.css');
+        $this->inlineScript()
+            ->prependFile('/dist/startui/js/app.js')
+            ->prependFile('/dist/startui/js/plugins.js')
+            ->prependFile('/dist/startui/js/lib/bootstrap/bootstrap.min.js')
+            ->prependFile('/dist/startui/js/lib/tether/tether.min.js')
+            ->prependFile('/dist/startui/js/lib/jquery/jquery.min.js');
+
+        $course = $this->course;
+
+        $this->headTitle($course->getName());
+
+        /**
+         * Anchors
+         */
+        $anchors = [];
+        foreach ($this->sharedContentForm() as $invokable) {
+            $link = $invokable($course->getId());
+            $anchors[] = '<a class="btn btn-inline btn-secondary" href="' . $link['href'] . '">' . $link['label'] . '</a>';
+        }
+
+        /**
+         * Content
+         */
+        $invokables = $this->sharedContentSingle();
+        $contents = [];
+        foreach ($this->content ?? [] as $content) {
+            $invokable = $invokables[$content->getContent()] ?? null;
+            if (is_callable($invokable)) {
+                $contents[] = $invokable($course->getId(), $content->getContentId());
+            }
+        }
+        ?>
+
+        <div class="box-typical box-typical-padding text-block bs">
+            <a class="btn btn-inline btn-secondary" href="<?php echo $this->url('course/form/course', ['id' => $course->getId()]); ?>">Edit</a>
+            <h2><?php echo $course->getName(); ?></h2>
+            <p><?php echo $course->getSummary(); ?></p>
+        </div>
+
+        <?php
+            foreach ($contents ?? [] as $string) {
+                echo '<div class="box-typical box-typical-padding text-block bs">' . $string . '</div>';
+            }
+            foreach ($anchors ?? [] as $string) {
+                echo $string;
+            }
+        ?>
+    </div>
+</div>
+<?php
+
+$this->inlineScript()->captureStart();
+echo <<<JS
+    (function ( $ ) {
+        $(document).on('click', '.delete-topic-item', function(e) {
+            e.preventDefault();
+            var topicRow = $(this).closest('.topic-row');
+            $.get( $(this).attr('data-type') + '/delete/' + $(this).attr('data-id'), function( data ) {
+                $(topicRow).remove();
+            });
+        });
+    })(jQuery);
+JS;
+$this->inlineScript()->captureEnd();
+
+

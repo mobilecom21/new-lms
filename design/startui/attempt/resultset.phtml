@@ -1,0 +1,251 @@
+<?php
+/**
+ * @var Attempt\Model\Attempts $attempt
+ */
+$this->headLink()
+    ->prependStylesheet('/dist/startui/css/custom.css')
+    ->prependStylesheet('/dist/startui/css/main.css')
+    ->prependStylesheet('/dist/startui/css/lib/bootstrap/bootstrap.min.css')
+    ->prependStylesheet('/dist/startui/css/lib/font-awesome/font-awesome.min.css')
+    ->prependStylesheet('/dist/startui/css/separate/vendor/datatables-net.min.css')
+    ->prependStylesheet('/dist/startui/css/lib/datatables-net/datatables.min.css');
+$this->inlineScript()
+    ->prependFile('/dist/startui/scripts/validator/magic.js')
+    ->prependFile('/dist/startui/scripts/tinymce/js/tinymce/tinymce.min.js')
+    ->prependFile('/dist/startui/js/app.js')
+    ->prependFile('/dist/startui/js/lib/datatables-net/datatables.min.js')
+    ->prependFile('/dist/startui/js/plugins.js')
+    ->prependFile('/dist/startui/js/lib/bootstrap/bootstrap.min.js')
+    ->prependFile('/dist/startui/js/lib/tether/tether.min.js')
+    ->prependFile('/dist/startui/js/lib/jquery/jquery.min.js');
+$this->headTitle('Exam Attempt');
+?>
+
+<?php
+$this->inlineScript()->captureStart();
+echo <<<JS
+    (function ($) {
+        var table = $('#attempt-table').DataTable({
+			"order": [],
+			"columnDefs": [{
+				"targets": 'no-sort',
+				"orderable": false,
+			}]
+		});
+		
+		// Add event listener for opening and closing details
+		$('#attempt-table tbody').on('click', 'tr', function () {
+			var tr = $(this).closest('tr');
+			var row = table.row( tr );
+
+			if ( row.child.isShown() ) {
+				// This row is already open - close it
+				row.child.hide();
+				tr.removeClass('shown table-success');
+				$( $(this).find('.font-icon') ).removeClass('font-icon-minus-1');
+			}
+			else {
+				// Open this row
+				row.child($( $(this).find('.child-div') ).html()).show();
+				tr.addClass('shown table-success');
+				$( $(this).find('.font-icon') ).addClass('font-icon-minus-1');
+			}
+		} );
+    })(jQuery);
+JS;
+$this->inlineScript()->captureEnd();
+?>
+<?php
+$result = $this->resultSet;
+//var_dump($result);
+?>
+<div class="page-content <?php if($this->login()['userChainCount'] >0 ) { echo "padding-zero"; } ?>">
+    <div class="container-fluid">
+        <?php if (count($this->resultSet) > 0) { ?>
+            <table id="attempt-table" class="display table table-striped table-bordered" cellspacing="0" width="100%">
+                <thead>
+                <tr>
+                    <th class="no-sort"></th>
+                    <th>Student Name</th>
+                    <th>Company</th>
+                    <th>Percentage</th>
+                    <th>Number<br/>of Fails</th>
+                    <th>Course Title</th>
+                    <th>Date Completed</th>
+                    <th>Status</th>
+                    <th>Attempts</th>
+                    <th class="text-center">Certificate<br/>Downloaded</th>
+
+                </tr>
+                </thead>
+                <tbody>
+                <?php
+
+                foreach($this->resultSet ?? [] as $key => $item)
+                {
+                    $arrByUser[$item->getStudentId()][$item->getExamId()][$key] = $item;
+                    $arrByExam[$item->getStudentId()][$item->getExamId()][$key] = $item;
+                }
+
+                foreach ($arrByUser as $attemptByUser) {
+
+                    foreach ($attemptByUser as $attemptByExam) {
+
+                        usort($attemptByExam, function($x, $y){
+                            $x = strtotime($x->getCreatedAt());
+                            $y = strtotime($y->getCreatedAt());
+                            if($x>$y){
+                                return 0;
+                            }
+                            return 1;
+                        });
+
+                        $attempt = $attemptByExam[0];
+
+                        $attemptdetails = $this->attempt->fetchByStudentIdExamId($attempt->getStudentId(),$attempt->getExamId());
+                        $countattempt = $this->attempt->countAttempt($attempt->getStudentId(),$attempt->getExamId());
+                        $countfailed = $this->attempt->countFailed($attempt->getStudentId(),$attempt->getExamId());
+                        if ($attempt->getScore() >= 75) { $status = 'Passed'; } else { $status = 'Failed'; }
+                        $user = $this->user->oneById($attempt->getStudentId());
+                        $exam = $this->exam->fetchById($attempt->getExamId())->current();
+                        if($exam) {
+                            $topic = $this->topic->fetchById($exam->getTopicId())->current();
+                            if (! $topic) {
+                                continue;
+                            }
+                            $content = $this->content->fetchByContentId($topic->getId())->current();
+                            if (! $content) {
+                                continue;
+                            }
+                            $course = $this->course->fetchById($content->getCourseId());
+                            if (! $course) {
+                                continue;
+                            }
+                        }
+                        $hasdownload = $attempt->getHasDownload();
+                        if ($hasdownload) {
+                            $isdownload = 'Yes';
+                        } else {
+                            $isdownload = 'No';
+                        }
+                        ?>
+                        <tr>
+                            <td>
+                                <i class="font-icon font-icon-plus"></i>
+
+                            </td>
+                            <td><?php echo $user->getFirstName()." ".$user->getLastName(); ?></td>
+                            <td></td>
+                            <td class="text-center"><?php echo round($attempt->getScore());?></td>
+                            <td class="text-center"><?php echo $countfailed;?></td>
+                            <td class="text-center"><b><?php if ($exam) echo $course->getName(); ?></b>
+                            <td class="text-center"><?php echo $attempt->getCreatedAt();?></td>
+                            <td class="text-center"><?php echo $status; ?></td>
+                            <td class="text-center"><?php echo $countattempt;?></td>
+                            <td class="text-center"><?php if ($status == 'Failed') { echo "N/A";  } else { echo $isdownload; };?>
+
+                                <!-- Child Table -->
+                                <div class="child-div hidden">
+                                    <b>Student Name : <?php echo $user->getFirstName()." ".$user->getLastName(); ?><br/>
+                                        Modul : <?php if ($exam) echo $course->getName(); ?></b>
+                                    <table class="child-table display table table-striped table-bordered" cellspacing="0" width="100%">
+                                        <thead>
+                                        <tr>
+                                            <th class="text-center">Percentage</th>
+                                            <th class="text-center">Date Time</th>
+                                            <th class="text-center">Status</th>
+                                            <th class="text-center">Certificate<br/>Downloaded</th>
+                                        </tr>
+                                        </thead>
+                                        <tbody>
+                                        <?php
+                                        foreach ($attemptByExam as $attempt) {
+                                            $attemptdetails = $this->attempt->fetchByStudentIdExamId($attempt->getStudentId(),$attempt->getExamId());
+                                            $countattempt = $this->attempt->countAttempt($attempt->getStudentId(),$attempt->getExamId());
+                                            $countfailed = $this->attempt->countFailed($attempt->getStudentId(),$attempt->getExamId());
+                                            if ($attempt->getScore() >= 75) { $status = 'Passed'; } else { $status = 'Failed'; }
+                                            $user = $this->user->oneById($attempt->getStudentId());
+                                            $exam = $this->exam->fetchById($attempt->getExamId())->current();
+                                            if($exam) {
+                                                $topic = $this->topic->fetchById($exam->getTopicId())->current();
+                                                if (! $topic) {
+                                                    continue;
+                                                }
+                                                $content = $this->content->fetchByContentId($topic->getId())->current();
+                                                if (! $content) {
+                                                    continue;
+                                                }
+                                                $course = $this->course->fetchById($content->getCourseId());
+                                                if (! $course) {
+                                                    continue;
+                                                }
+                                            }
+                                            $hasdownload = $attempt->getHasDownload();
+                                            if ($hasdownload) {
+                                                $isdownload = 'Yes';
+                                            } else {
+                                                $isdownload = 'No';
+                                            }
+                                            ?>
+                                            <tr>
+                                                <td class="text-center"><?php echo round($attempt->getScore());?></td>
+                                                <td class="text-center"><?php echo $attempt->getCreatedAt();?></td>
+                                                <td class="text-center"><?php echo $status; ?></td>
+                                                <td class="text-center"><?php if ($status == 'Failed') { echo "N/A";  } else { echo $isdownload; };?></td>
+                                            </tr>
+                                            <?php
+                                        }
+                                        ?>
+                                        </tbody>
+                                    </table>
+                                </div>
+                                <!-- end child table -->
+
+                            </td>
+                        </tr>
+                        <?php
+                    }
+                }
+
+                if (false) {
+                    foreach ($this->resultSet ?? [] as $attempt) :
+                        $attemptdetails = $this->attempt->fetchByStudentIdExamId($attempt->getStudentId(),$attempt->getExamId());
+                        $countattempt = $this->attempt->countAttempt($attempt->getStudentId(),$attempt->getExamId());
+                        $countfailed = $this->attempt->countFailed($attempt->getStudentId(),$attempt->getExamId());
+                        if ($attempt->getScore() >= 75) { $status = 'Passed'; } else { $status = 'Failed'; }
+                        $user = $this->user->oneById($attempt->getStudentId());
+                        $exam = $this->exam->fetchById($attempt->getExamId())->current();
+                        if($exam) {
+                            $topic = $this->topic->fetchById($exam->getTopicId())->current();
+                            $content = $this->content->fetchByContentId($topic->getId())->current();
+                            $course = $this->course->fetchById($content->getCourseId());
+                        }
+                        $hasdownload = $attempt->getHasDownload();
+                        if ($hasdownload) {
+                            $isdownload = 'Yes';
+                        } else {
+                            $isdownload = 'No';
+                        }
+                        ?>
+                        <tr>
+                            <td><?php echo $user->getFirstName()." ".$user->getLastName(); ?></td>
+                            <td></td>
+                            <td class="text-center"><?php echo round($attempt->getScore());?></td>
+                            <td class="text-center"><?php echo $countfailed;?></td>
+                            <td class="text-center"><b><?php if ($exam) echo $course->getName(); ?></b><br/>
+                                <?php if ($exam) echo "Modul : <br/><i>".$topic->getName()."</i>"; ?><br/>
+                                <?php if ($exam) echo "Exam : <br/><i>".$exam->getName()."</i>"; ?></td>
+                            <td></td>
+                            <td class="text-center"><?php echo $status; ?></td>
+                            <td class="text-center"><?php echo $countattempt;?></td>
+                            <td class="text-center"><?php if ($status == 'Failed') { echo "N/A";  } else { echo $isdownload; };?></td>
+                        </tr>
+                    <?php endforeach; ?>
+                <?php } ?>
+                </tbody>
+            </table>
+        <?php } else { ?>
+            No attempt done yet.
+        <?php } ?>
+    </div>
+</div>

@@ -1,0 +1,168 @@
+<?php
+/**
+ * @var array
+ */
+
+$navigation = $this->sharedNavigationPrimary(false)[$this->identity()->getRole()]?? [];
+$disallowMessaging = $this->disallowMessaging()->isAllCourseDisallowMessaging($this->identity()->getId());
+
+//check to see if there are any short course rows returned for that user
+$userIsEnrolledInShortCourse = count( $this->courseUser()->isUserEnrolledInShortCourse($this->identity()->getId())->toArray() );
+
+// order by key
+ksort($navigation);
+
+?>
+<div class="mobile-menu-left-overlay"></div>
+<nav class="side-menu side-menu-big-icon">
+    <ul class="side-menu-list">
+        <?php foreach ($navigation as $item) { ?>
+            <?php
+                $studentWorkClass = ''; 
+                $icon = 'font-icon-dashboard';
+                if ('student/user/view/resultset' == $item['routeName']) {
+                    $icon = 'font-icon-users';
+                } elseif ('tutor/user/view/resultset' == $item['routeName']) {
+                    $icon = 'font-icon-users';
+                } elseif ('admin/user/view/resultset' == $item['routeName']) {
+                    $icon = 'font-icon-users';
+                } elseif (in_array($item['routeName'], ['course/view/resultset', 'tutor/course/view/resultset'])) {
+                    $icon = 'font-icon-doc';
+                } elseif ('message/view/resultset' == $item['routeName']) {
+                    $icon = 'font-icon-mail';
+                } elseif (in_array($item['routeName'], ['assignment/view/work/resultset', 'tutor/assignment/view/work/resultset', 'student/course/view/resultset'])) {
+                    $icon = 'font-icon-list-square';
+                    $studentWorkClass .= ' with-sub';
+                } elseif ('attempt/view/resultset' == $item['routeName']) {
+                    $icon = 'font-icon-notebook';
+                } elseif ('certificate/view/resultset' == $item['routeName']) {
+                    $icon = 'font-icon-award';
+                } elseif ('payment/view/resultset' == $item['routeName']) {
+                    $icon = 'font-icon-wallet';
+                }
+
+                //by default, show all available nav options, unless disabled below
+                $showLink = true;
+                
+                //don't show messaging option is messaging is disabled for user
+                if(\Rbac\Role\Student::class === $this->identity()->getRole()
+                    && 'message/view/resultset' == $item['routeName']
+                    && $disallowMessaging) {                    
+                    $showLink = false;
+                }
+
+                //if a student is not enrolled in a short course, dont' show the navigation options
+                if (\Rbac\Role\Student::class === $this->identity()->getRole()
+                    && in_array($item['routeName'], ['certificate/view/resultset', 'payment/view/resultset'])
+                    && ! $userIsEnrolledInShortCourse) {
+                    $showLink = false;
+                }
+
+                $open = '';
+                try {
+                    if ($item['active'] == substr($this->url(), 0, strlen($item['active']))) {
+                        $open = 'opened';
+                    }
+                } catch (Exception $e) {}
+
+                if($showLink) {
+                
+                    //if menu item is student work, add subnav elements
+                    if(strlen($studentWorkClass) > 0 && 'student/course/view/resultset' != $item['routeName']) {
+                ?>
+                    <li class="<?php echo $open . $studentWorkClass; ?>">
+                        <span>
+                            <a href="<?php echo !empty($item['routeName']) ? $this->url($item['routeName'], $item['params'] ?? []) : ''; ?>">
+                                <i class="font-icon <?php echo $icon; ?>"></i>
+                                <span class="lbl"><?php echo $item['label'] ?? ''; ?></span>
+                            </a>
+                        </span>
+
+                        <ul class="">
+                            <li>
+                                <a href="<?php echo $this->url($this->matchedRouteName, ['filter' => 'all']); ?>">
+                                    <span class="lbl">All</span>
+                                </a>
+                            </li>
+                            <li>
+                                <a href="<?php echo $this->url($this->matchedRouteName, ['filter' => 'marked']); ?>">
+                                    <span class="lbl">Marked</span>
+                                </a>
+                            </li>
+                            <li>
+                                <a href="<?php echo $this->url($this->matchedRouteName, ['filter' => 'passed']); ?>">
+                                    <span class="lbl">Passed</span>
+                                </a>
+                            </li>
+                            <li>
+                                <a href="<?php echo $this->url($this->matchedRouteName, ['filter' => 'failed']); ?>">
+                                    <span class="lbl">Referred</span>
+                                </a>
+                            </li>
+                            <li>
+                                <a href="<?php echo $this->url($this->matchedRouteName, ['filter' => 'due']); ?>">
+                                    <span class="lbl">Due</span>
+                                </a>
+                            </li>
+                            <li>
+                                <a href="<?php echo $this->url($this->matchedRouteName, ['filter' => 'overdue']); ?>">
+                                    <span class="lbl">Overdue</span>
+                                </a>
+                            </li>
+                            <li>
+                                <a href="<?php echo $this->url($this->matchedRouteName, ['filter' => 'overdue-marked']); ?>">
+                                    <span class="lbl">Overdue Marked</span>
+                                </a>
+                            </li>
+                        </ul>
+                    </li>
+                <?php 
+                    } else {
+                    ?>
+                    <li class="<?php echo $open; ?>">
+                        <?php if('course/view/resultset' != $item['routeName']) { ?>
+                        <a href="<?php echo !empty($item['routeName']) ? $this->url($item['routeName'], $item['params'] ?? []) : ''; ?>">
+                            <i class="font-icon <?php echo $icon; ?>"></i>
+                            <span class="lbl"><?php echo $item['label'] ?? ''; ?></span>
+                        </a>
+                        <?php } else { ?>
+                        <a href="/course/resultset">
+                            <i class="font-icon <?php echo $icon; ?>"></i>
+                            <span class="lbl"><?php echo $item['label'] ?? ''; ?></span>
+                        </a>
+                        <?php } ?>
+                    </li>
+                <?php   
+                    }
+                } ?>
+        <?php } ?>
+    </ul>
+</nav><!--.side-menu-->
+<?php
+$this->inlineScript()->captureStart();
+echo <<<JS
+    (function ( $ ) {
+        $.get('/message/unread',function(data) {
+            if (data['unread'] > 0) {
+                $(".font-icon-mail" ).addClass('active');
+                $(".font-icon-mail" ).parent().find('span').text('Messages (' + data['unread'] + ')');
+            }
+        });
+    })(jQuery);
+JS;
+$this->inlineScript()->captureEnd();
+if (\Rbac\Role\Tutor::class === $this->identity()->getRole()) {
+$this->inlineScript()->captureStart();
+echo <<<JS
+(function ( $ ) {
+    $.get('/assignment/unread',function(data) {
+        if (data['unread'] > 0) {
+            $(".font-icon-list-square" ).addClass('active');
+            $(".font-icon-list-square" ).parent().find('span').append(' (' + data['unread'] + ')');
+        }
+    });
+})(jQuery);
+JS;
+$this->inlineScript()->captureEnd();
+}
+?>

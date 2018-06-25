@@ -1,0 +1,107 @@
+<div class="page-content <?php if($this->login()['userChainCount'] >0 ) { echo "padding-zero"; } ?>">
+    <div class="container-fluid">
+        <?php
+        /**
+         * @var Course\Model\Content $content
+         * @var Course\Model\Course $course
+         * @var User\Model\User $user
+         */
+
+        $this->headLink()
+            ->prependStylesheet('/dist/startui/css/custom.css')
+            ->prependStylesheet('/dist/startui/css/main.css')
+            ->prependStylesheet('/dist/startui/css/lib/bootstrap/bootstrap.min.css')
+            ->prependStylesheet('/dist/startui/css/lib/font-awesome/font-awesome.min.css')
+            ->prependStylesheet('/dist/startui/css/lib/bootstrap-sweetalert/sweetalert.css')
+            ->prependStylesheet('/dist/startui/css/separate/vendor/sweet-alert-animations.min.css');
+        $this->inlineScript()
+            ->prependFile('/dist/startui/js/app.js')
+            ->prependFile('/dist/startui/js/plugins.js')
+            ->prependFile('/dist/startui/js/lib/bootstrap/bootstrap.min.js')
+            ->prependFile('/dist/startui/js/lib/tether/tether.min.js')
+            ->prependFile('/dist/startui/js/lib/bootstrap-sweetalert/sweetalert.min.js')
+            ->prependFile('/dist/startui/js/lib/jquery/jquery.min.js');
+
+        $course = $this->course;
+        $messageTutor = $this->messagetutor;
+        $certPrintFree = $this->certificateprintfree;
+        $user = $this->identity();
+
+        $this->headTitle($course->getName());
+
+        $isDisallowMessageTutor = true;
+        $isDisallowMessageTutor = $messageTutor->isStudentCanNotMessageThisCourse($course->getId(),$user->getId());
+
+        $isFreePrintCertificate = false;
+        $isFreePrintCertificate = $certPrintFree->isStudentFreePrintCertificateThisCourse($course->getId(),$user->getId());
+
+        /**
+         * Content
+         */
+        $invokables = $this->sharedContentSingle();
+        $contents = [];
+        foreach ($this->content as $content) {
+            $invokable = $invokables[$content->getContent()] ?? null;
+            if (is_callable($invokable)) {
+                $contents[] = $invokable($course->getId(), $content->getContentId(), true, null, $this->routeNamespace);
+            }
+        }
+        ?>
+        <?php if ('student' === $this->routeNamespace && !$isDisallowMessageTutor) { ?>
+            <p class="message-tutor"><a href='/message/form/quiz/<?php echo $course->getId(); ?>' class="btn btn-primary"><span class="font-icon font-icon-comments"></span>&nbsp;&nbsp;Message my tutor</a></p>
+        <?php } ?>
+        <div class="box-typical box-typical-padding text-block bs">
+            <h1><?php echo $course->getName(); ?></h1>
+            <p><?php echo $course->getSummary(); ?></p>
+        </div>
+
+        <?php
+        foreach ($contents ?? [] as $string) {
+            echo '<div class="box-typical box-typical-padding text-block bs">' . $string . '</div>';
+        }
+        ?>
+    </div>
+</div>
+<?php
+$data = $this->data;
+$isNoFirstOffer = $data['noFirstoffer'];
+$showOffer = $data['showOffer'];
+$examNumber = $data['examNumber'];
+if($examNumber > 0) $examId = $data['examIds'][0];
+$userId = $user->getId();
+
+if ($showOffer == 'yes' && \Rbac\Role\Student::class === $this->identity()->getRole() && $examNumber == 1 && $isNoFirstOffer != 'yes' && !$isFreePrintCertificate) {
+
+    $linkURL = $this->url('certificate/form/payment',array('id' => $examId));
+    $offerURL = $this->url('certificate/json/offer');
+
+    $this->inlineScript()->captureStart();
+    echo <<<JS
+		$(document).ready(function() {
+				var linkURL = '$linkURL';
+				swal({
+					html:true,
+					title: "Want to strengthen your CV?",
+					text: "<small>So you've taken the first steps on your new learning experience! Becoming a learner again is an incredible venture and we want to make it as seamless as possible for all our learners.<br/><br/>To help you further enjoy your learning experience we want to make sure there are no loose end from the get go. So you don't have to worry about certificateion we'd like to offer you the chance to purchase a hard copy certificate now just for &#163;25!</small>",
+					type: "success",
+					showCancelButton: true,
+					cancelButtonClass: "btn-default",
+					confirmButtonText: "Buy Now",
+					confirmButtonClass: "btn-success",
+					timer: 600000
+				}, function(isConfirm) {
+						if (isConfirm === null || isConfirm == false) {
+							$.post('$offerURL');
+							swal.close();
+						} else { 
+							$.post('$offerURL', function( data ) {
+								window.location.href = linkURL;
+							});							
+						}
+				});
+		});
+JS;
+    $this->inlineScript()->captureEnd();
+
+}
+?>

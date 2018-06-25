@@ -1,0 +1,25 @@
+<?php
+
+if($this->login()['userChainCount'] >0) { ?>
+    <div class='page-content'>
+    <div class='container-fluid'>
+        <div clas='row'>
+            <div class='col-x1-7'>
+                <ol class='breadcrumb breadcrumb-text'>               
+                <li><strong>Logged in as</strong></li>
+                <?php
+                foreach($this->login()['userChain'] as $user) {
+                    echo "<li>{$user['name']}</li>";
+                }
+                echo "<li>" . $this->identity()->getFirstName() . ' ' . $this->identity()->getLastName() . "</li>";
+                ?>
+            </ol>
+            </div>
+        </div>
+    </div>
+    </div>
+
+<?php
+}
+
+?>

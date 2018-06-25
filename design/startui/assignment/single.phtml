@@ -1,0 +1,210 @@
+<?php
+$this->headLink()
+    ->prependStylesheet('/dist/startui/css/custom.css')
+    ->prependStylesheet('/dist/startui/css/main.css')
+    ->prependStylesheet('/dist/startui/css/lib/bootstrap/bootstrap.min.css')
+    ->prependStylesheet('/dist/startui/css/lib/font-awesome/font-awesome.min.css')
+    ->prependStylesheet('/dist/startui/scripts/dropzone/dropzone.css');
+$this->inlineScript()
+    ->prependFile('/dist/startui/scripts/validator/magic.js')
+    ->prependFile('/dist/startui/scripts/dropzone/dropzone.js')
+    ->prependFile('/dist/startui/scripts/tinymce/js/tinymce/tinymce.min.js')
+    ->prependFile('/dist/startui/js/app.js')
+    ->prependFile('/dist/startui/js/plugins.js')
+    ->prependFile('/dist/startui/js/lib/bootstrap/bootstrap.min.js')
+    ->prependFile('/dist/startui/js/lib/tether/tether.min.js')
+    ->prependFile('/dist/startui/js/lib/jquery/jquery.min.js');
+?>
+<div class="page-content <?php if($this->login()['userChainCount'] >0 ) { echo "padding-zero"; } ?>">
+    <div class="container-fluid">
+        <div class="box-typical box-typical-padding text-block bs">
+            <?php
+            /**
+             * @var Assignment\Model\Assignment $assignment
+             * @var Assignment\Model\Assignment $_assignment
+             * @var Assignment\Model\AssignmentWork $assignmentWork
+             * @var Assignment\Model\AssignmentWork[] $assignmentWorkResultSet
+             * @var Assignment\Model\AssignmentWork $lastAssignmentWork
+             * @var \Zend\Form\Form $workForm
+             * @var \Zend\Form\Element $submitElement
+             */
+            $assignmentWorkResultSet = $this->assignmentWorkResultSet;
+            $lastAssignmentWork = $this->lastAssignmentWork;
+            $assignment = $this->assignment;
+            $workForm = $this->workForm;
+            $assignmentFiles = $this->assignmentFiles;
+            // hide form if worker did not meet criteria to pass
+            if ($lastAssignmentWork && $lastAssignmentWork->didNotPass()) {
+                $workForm->setAttribute('style', 'display:none');
+            }
+
+            $submitElement = $workForm->get('submit');
+            $submitElement->setAttribute('class', 'btn-inline btn-secondary');
+            $workForm->setAttribute('action', $this->url('student/assignment/post/work/work', [
+                'id' => $assignment->getId()
+            ]));
+            $workForm->prepare();
+            ?>
+                <h1><?php echo $assignment->getName(); ?></h1>
+                <?php echo $assignment->getSummary(); ?>
+                <p>
+                    <?php foreach ($assignmentFiles as $assignmentFile) { ?>
+                        <a target="_blank" href="<?php echo $this->url('assignment/file', ['id' => $assignment->getId(), 'fileId' => $assignmentFile['id']]); ?>"><?php echo $assignmentFile['name']; ?></a><br>
+                    <?php } ?>
+                </p>
+            <?php
+            if ($lastAssignmentWork) {
+                assignmentTable($this, ...$assignmentWorkResultSet);
+            }
+            ?>
+
+            <?php
+            if ((!$lastAssignmentWork || $lastAssignmentWork->didNotPass()) && \Rbac\Role\Student::class === $this->identity()->getRole()) {
+                echo $this->form()->openTag($workForm);
+                echo '<div class="form-group"><label>Upload assignment</label><div class="dropzone"></div></div>';
+                echo $this->twbsFormRow($workForm->get('assignment'));
+                echo $this->twbsFormRow($submitElement);
+                echo $this->form()->closeTag();
+            }
+
+            function theStatus(\Assignment\Model\AssignmentWork $assignmentWork)
+            {
+                $createdAt = $assignmentWork->createdAt()->format('F j, Y, g:i a');
+                $updatedAt = $assignmentWork->updatedAt()->format('F j, Y, g:i a');
+
+                if ($assignmentWork->isWaitingToPass()) {
+                    $submissionStatus = 'Sent to your tutor on ' . $createdAt;
+                    $gradingStatus = 'Not graded';
+                } elseif ($assignmentWork->didNotPass()) {
+                    $submissionStatus = 'Feedback provided by tutor ' . $updatedAt;
+                    $gradingStatus = 'You have not met the criteria to complete this ' .
+                        'module, please review the tutor feedback and re-submit.';
+                } elseif ($assignmentWork->hasPassed()) {
+                    $submissionStatus = 'Feedback provided by tutor ' . $updatedAt;
+                    $gradingStatus = 'Passed, no further action required on this Module.';
+                }
+
+                return [
+                    'submissionStatus' => $submissionStatus ?? '',
+                    'gradingStatus' => $gradingStatus ?? ''
+                ];
+            }
+
+            function assignmentTable($that, \Assignment\Model\AssignmentWork ...$assignmentWorks)
+            {
+                ?>
+                <table class="table table-bordered">
+                    <?php
+                    foreach ($assignmentWorks as $key => $assignmentWork) :
+                        $theStatus = theStatus($assignmentWork);
+                        $hideOtherThanFirst = 0 !== $key ? 'show-older-work style="display:none"' : '';
+                        ?>
+                        <tr <?php echo $hideOtherThanFirst; ?>>
+                            <th>Submission status</th>
+                            <th><?php echo $theStatus['submissionStatus']; ?></th>
+                        </tr>
+                        <tr <?php echo $hideOtherThanFirst; ?>>
+                            <td>Grading Status</td>
+                            <td><?php echo $theStatus['gradingStatus']; ?></td>
+                        </tr>
+                        <?php if ($assignmentWork->hasTutorFeedback()) : ?>
+                        <tr <?php echo $hideOtherThanFirst; ?>>
+                            <td></td>
+                            <td>
+                                <a href="<?php echo $that->url('uploader/download', [
+                                    'key' => $assignmentWork->feedbackUploader()->getUniqueKey()
+                                ]); ?>" class="btn btn-inline btn-secondary">Download tutor feedback</a>
+                                <?php if ($assignmentWork->didNotPass() && 0 === $key) : ?>
+                                    <button class="btn btn-inline btn-secondary" id="resubmitAssignment">Re-submit your work</button>
+                                <?php endif; ?>
+                            </td>
+                        </tr>
+                        <?php
+                    endif;
+                    endforeach;
+                    ?>
+                </table>
+                <?php
+            }
+            ?>
+        </div>
+    </div>
+</div>
+<?php
+$this->inlineScript()->captureStart();
+echo <<<JS
+    (function ($) {
+        $('#resubmitAssignment').on('click', function(event) {
+            event.preventDefault();
+            event.stopPropagation();
+            $('#work, #pastWorkResultSet, [show-older-work]').show();
+        });
+    })(jQuery);
+JS;
+$this->inlineScript()->captureEnd();
+?>
+
+<?php
+$this->inlineScript()->captureStart();
+echo <<<JS
+    (function ( $ ) {
+        if ($('.dropzone').length) {
+            var assignment = $('input[name="assignment"]');
+            Dropzone.autoDiscover = false;
+            var myDropzoneOptions = {
+                url: '/uploader/upload',
+                maxFiles: 1,
+                maxFilesize: 3,
+                addRemoveLinks: true
+            };
+            var myDropzone = new Dropzone('.dropzone', myDropzoneOptions);
+            myDropzone.on('success', function (file, response) {
+                if (null == response.id) {
+                    alert('Please upload one of the following formats: doc, docx, pdf, odt, jpeg, png, bmp, zip, txt, pages');
+                    myDropzone.removeAllFiles();
+                } else {
+                    file.uploadId = response.id;
+                    $(assignment).val(response.id);
+                }
+            });
+            myDropzone.on('addedfile', function (file) {
+                switch (file.type) {
+                    case 'application/pdf':
+                        myDropzone.emit("thumbnail", file, '/dist/startui/images/pdf-icon.png');
+                        break;
+                    case 'application/vnd.openxmlformats-officedocument.wordprocessingml.document':
+                        myDropzone.emit("thumbnail", file, '/dist/startui/images/doc-icon.png');
+                        break;
+                    case 'application/msword':
+                        myDropzone.emit("thumbnail", file, '/dist/startui/images/doc-icon.png');
+                        break;
+                    case 'application/docx':
+                        myDropzone.emit('thumbnail', file, '/dist/startui/images/doc-icon.png');
+                        break;  
+                    case 'application/vnd.openxmlformats-officedocument.wordprocessingml.d':
+                            myDropzone.emit('thumbnail', file, '/dist/startui/images/doc-icon.png');
+                            break; 
+                    case 'application/vnd.ms-excel':
+                        myDropzone.emit("thumbnail", file, '/dist/startui/images/excel-icon.png');
+                        break;
+                    case 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet':
+                        myDropzone.emit("thumbnail", file, '/dist/startui/images/excel-icon.png');
+                        break;
+                    case 'application/octet-stream':
+                        myDropzone.emit('thumbnail', file, '/dist/startui/images/zip-icon.png');
+                        break;
+                    case 'application/zip':
+                        myDropzone.emit('thumbnail', file, '/dist/startui/images/zip-icon.png');
+                        break;
+                }
+            });
+            myDropzone.on('removedfile', function (file) {
+                var assignId = $(assignment).val();
+                if(file.uploadId && assignId == file.uploadId) {
+                    $(assignment).val('');
+                }
+            });
+        }
+    })(jQuery);
+JS;
+$this->inlineScript()->captureEnd();

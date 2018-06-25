@@ -1,0 +1,281 @@
+<?php
+/**
+ * @var Certificate\Model ResultSet
+ */
+$this->headLink()
+    ->prependStylesheet('/dist/startui/css/custom.css')
+    ->prependStylesheet('/dist/startui/css/main.css')
+    ->prependStylesheet('/dist/startui/css/lib/bootstrap/bootstrap.min.css')
+    ->prependStylesheet('/dist/startui/css/lib/font-awesome/font-awesome.min.css')
+    ->prependStylesheet('/dist/startui/css/separate/vendor/datatables-net.min.css')
+    ->prependStylesheet('/dist/startui/css/lib/bootstrap-sweetalert/sweetalert.css')
+    ->prependStylesheet('/dist/startui/css/separate/vendor/sweet-alert-animations.min.css')
+    ->prependStylesheet('/dist/startui/css/lib/datatables-net/datatables.min.css');
+$this->inlineScript()
+    //->prependFile('/dist/startui/scripts/validator/magic.js')
+    ->prependFile('/dist/startui/scripts/tinymce/js/tinymce/tinymce.min.js')
+    ->prependFile('/dist/startui/js/app.js')
+    ->prependFile('/dist/startui/js/lib/datatables-net/datatables.min.js')
+    ->prependFile('/dist/startui/js/plugins.js')
+    ->prependFile('/dist/startui/js/lib/bootstrap/bootstrap.min.js')
+    ->prependFile('/dist/startui/js/lib/tether/tether.min.js')
+	->prependFile('/dist/startui/js/lib/bootstrap-sweetalert/sweetalert.min.js')
+    ->prependFile('/dist/startui/js/lib/jquery/jquery.min.js');
+$this->headTitle('Print Certificates');
+?>
+
+<?php
+$this->inlineScript()->captureStart();
+echo <<<JS
+    (function ($) {
+        var table = $('#payment-table').DataTable({
+			"order": [],
+			"columnDefs": [{
+				"targets": 'no-sort',
+				"orderable": false,
+			}]
+		});
+		$("#checkAll").click(function(){
+			$('input:checkbox').not(this).prop('checked', this.checked);
+		});
+		$('#downloadAll,#downloadAddress,#deliverystatus,#undeliverystatus').click(function(e) {
+			checked = $("input[name='id[]']:checked").not("input[name='id[]']:disabled").length;
+			if(!checked) {
+			  e.preventDefault();
+				swal({
+					title: "Oh no !",
+					text: "You must check at least one checkbox!",
+					type: "warning",
+					confirmButtonClass: "btn-danger",
+					confirmButtonText: "Ok"
+				});
+			}
+		});
+
+    })(jQuery);
+JS;
+$this->inlineScript()->captureEnd();
+?>
+<?php
+	$result = $this->resultSet;
+	//var_dump($result);
+	//echo count($this->resultSet);
+
+	if (\Rbac\Role\Student::class === $this->identity()->getRole()) {
+		$newresult = array();
+		foreach($result as $key => $payment)
+		{
+			if ($payment['student_id'] == $this->identity()->getId()) {
+				$newresult[$key] = $payment;
+			}
+		}
+		$result = array();
+		$result = $newresult;
+	}
+?>
+<div class="page-content <?php if($this->login()['userChainCount'] >0 ) { echo "padding-zero"; } ?>">
+    <div class="container-fluid">
+        <?php if (count($result) > 0) { ?>
+			<form action="<?php echo $this->url('certificate/view/resultset');?>" method="post" id="multicertificate">
+            <table id="payment-table" class="display table table-striped table-bordered" cellspacing="0" width="100%">
+                <thead>
+                <tr>
+					<th class="text-center no-sort"><input id="checkAll" type="checkbox" name="checkAll"/></th>
+					<?php if(\Rbac\Role\Administrator::class === $this->identity()->getRole()) { ?>
+                    <th class="text-center">Student Name</th>
+					<?php } ?>
+                    <th class="text-center">Course Name</th>
+					<th class="text-center">Date Transaction</th>
+                    <th class="text-center">Paid Amount</th>
+					<th class="text-center">Downloaded</th>
+					<th class="text-center">Actions</th>
+					<th class="text-center">Status</th>
+					
+                </tr>
+                </thead>
+                <tbody>
+                <?php
+					foreach($result as $key => $payment)
+					{
+						$user = $this->user->oneById($payment['student_id']);
+						$course_id = $this->examtries->GetCourseIdfromExamId($payment['exam_id']);
+						$course = $this->course->fetchById($course_id);
+						$delivery = $this->delivery->fetchByPaymentId($payment['id'])->current();						
+
+						if($delivery) { 
+							$status_sent = $delivery->getStatusSent();
+							if($status_sent) {
+								$say_status_sent = 'Sent';
+							} else {
+								$say_status_sent = 'Not Sent';
+							}
+						} else {
+							$say_status_sent = 'Not Sent';
+						}
+						
+
+						$attempts = $this->attempt->fetchByStudentIdExamId($payment['student_id'],$payment['exam_id']);
+						$numberattempt = count($attempts);
+						//var_dump($attempts);
+						if ($numberattempt > 0) {
+							$score = array();
+							$theid = array();
+							$downloadd = array();
+							foreach($attempts ?? [] as $key => $attempt) {
+								//var_dump($attempt);
+								$score[$key] = $attempt->score;
+								$theid[$key] = $attempt->id;
+								$download[$key] = $attempt->hasdownload;
+							}
+							$maximum_score = max($score);
+
+							if($maximum_score >= 75) {
+								$thekey = array_search($maximum_score,$score);
+								$attemptid = $theid[$thekey];
+								$urldownload = $this->url('certificate/view/certificate', ['id' => $attemptid]);
+								$hasdownload = $download[$thekey];
+								$disabled = ''; 
+							} else {
+								$urldownload = false;
+								$hasdownload = 0;
+								$attemptid = NULL;
+								$disabled = 'disabled="disabled"';
+							}
+						} else {
+							$maximum_score = 0;
+							$urldownload = false;
+							$hasdownload = 0;
+							$attemptid = NULL;
+							$disabled = 'disabled="disabled"';
+						}
+						$date = new DateTime($payment['creation_date']);
+						$dateformat = $date->format('jS F Y g:ia');
+						if ($hasdownload) { 
+							$isdownload = 'Yes';
+						} else {
+							$isdownload = 'No';
+						}
+						
+				?>	<tr>	
+						<td class="text-center">
+						<input class="form-group" type="checkbox" name="id[]" value="<?php echo $attemptid;?>|<?php echo $payment['id'];?>" <?php echo $disabled;?>></td>
+						<?php if(\Rbac\Role\Administrator::class === $this->identity()->getRole()) { ?>
+                        <td><?php echo $user->getFirstName()." ".$user->getLastName(); ?></td>
+						<?php } ?>
+                        <td><?php echo $course->getName();?></td>
+                        <td class="text-center"><?php echo $dateformat;?></td>
+                        <td class="text-center">&#163;<?php echo $payment['amount'];?></td>
+						<td class="text-center"><?php echo $isdownload;?></td>
+						<td class="text-center">
+							<?php if($urldownload) { ?>
+								<a href="<?php echo $urldownload;?>">Download</a>
+							<?php } else { ?>
+								[not pass yet]
+							<?php } ?>
+						</td>
+						<?php if(\Rbac\Role\Administrator::class === $this->identity()->getRole() && $urldownload) { ?>
+							<td class="text-center"><a href="<?php echo $this->url('certificate/json/delivery',['id'=> $payment['id']]);?>"><?php echo $say_status_sent;?></a></td>
+						<?php } else { ?>
+							<td class="text-center"><?php echo $say_status_sent;?></td>
+						<?php } ?>
+                    </tr>
+				<?php
+					}
+				?>
+                </tbody>
+            </table>
+			<div class="container-fluid">
+				<div class="row">
+					<div class="col-sm-12 col-md-5">
+						<input id="downloadAll" class="btn btn-secondary" type="submit" value="Download Certificate(s)" name="submit">
+						<?php if(\Rbac\Role\Administrator::class === $this->identity()->getRole()) { ?>			
+						<input id="downloadAddress" class="btn btn-secondary" type="submit" value="Download Address(es)" name="submit">
+						<?php } ?>
+					</div>
+					<div class="col-sm-12 col-md-7 text-right">
+					
+					<?php if(\Rbac\Role\Administrator::class === $this->identity()->getRole()) { ?>
+					Change status : 
+							<div class="btn-group">
+								<input id="deliverystatus" class="btn btn-outline btn-secondary-outline" type="submit" value="Sent" name="submit">
+								<input id="undeliverystatus" class="btn btn-outline btn-secondary-outline" type="submit" value="Not Sent" name="submit">
+							</div>
+					<?php } ?>
+					</div>
+				</div>
+			</div>
+			</form>
+			<p></p>
+        <?php } else { ?>
+            No transaction yet.
+        <?php } ?>
+    </div>
+</div>
+<?php
+$certificateURL = $this->url('certificate/view/multicertificate');
+$this->inlineScript()->captureStart();
+echo <<<JS
+	$(function() {
+
+		$("#downloadAll").on("click", function(){
+			$('#multicertificate').attr('action', '$certificateURL').submit();
+		});
+	});
+JS;
+$this->inlineScript()->captureEnd();
+
+if(\Rbac\Role\Administrator::class === $this->identity()->getRole()) {
+$linkURL = $this->url('certificate/view/mergeaddress');
+$sentURL = $this->url('certificate/json/sent');
+$unsentURL = $this->url('certificate/json/unsent');
+$this->inlineScript()->captureStart();
+echo <<<JS
+	$(function() {
+		$("#downloadAddress").on("click", function(){
+			$('#multicertificate').attr('action', '$linkURL').submit();
+		});
+		$("#deliverystatus").on("click", function(){
+			$('#multicertificate').submit( function(e) {
+				e.preventDefault();
+				var data = $('#multicertificate').serialize();
+				console.log(data);
+				$.ajax({
+					type: 'POST',
+					data: data,
+					url: '$sentURL',
+					dataType: 'json',
+					success: function ( response, textStatus, jqxhr ) {	 
+						if (!response.status) {	 	 
+							//console.log(response.redirectTo);
+							window.location = response.redirectTo;
+							return false;	 
+						} 	 
+					}
+				});
+			});
+		});
+		$("#undeliverystatus").on("click", function(){
+			$('#multicertificate').submit( function(e) {
+				e.preventDefault();
+				var data = $('#multicertificate').serialize();
+				console.log(data);
+				$.ajax({
+					type: 'POST',
+					data: data,
+					url: '$unsentURL',
+					dataType: 'json',
+					success: function ( response, textStatus, jqxhr ) {	 
+						if (!response.status) {	 	 
+							//console.log(response.redirectTo);
+							window.location = response.redirectTo;
+							return false;	 
+						} 	 
+					}
+				});
+			});
+		});
+	});
+JS;
+$this->inlineScript()->captureEnd();
+}
+?>

@@ -1,0 +1,16 @@
+<?php
+
+return [
+    'mail' => [
+        'type' => 'smtp',
+        'options' => [
+            'host' => 'email-smtp.us-east-1.amazonaws.com',
+            'port' => '587',
+            'connection_class'  => 'login',
+            'connection_config' => [
+                'username' => 'AKIAIUGZBLJEJ6OH6SKA',
+                'password' => 'AgGzdigdK81E7sbBqfid4Efs79mFgUjrpW8VjvSiYnmO',
+            ]
+        ]
+    ]
+];

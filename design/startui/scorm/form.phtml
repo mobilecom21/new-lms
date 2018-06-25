@@ -1,0 +1,194 @@
+<?php
+$this->headLink()
+    ->prependStylesheet('/dist/startui/css/custom.css')
+    ->prependStylesheet('/dist/startui/css/main.css')
+    ->prependStylesheet('/dist/startui/css/lib/bootstrap/bootstrap.min.css')
+    ->prependStylesheet('/dist/startui/css/lib/font-awesome/font-awesome.min.css')
+    ->prependStylesheet('/dist/startui/scripts/dropzone/dropzone.css');
+$this->inlineScript()
+    ->prependFile('/dist/startui/scripts/validator/magic.js')
+    ->prependFile('/dist/startui/scripts/dropzone/dropzone.js')
+    ->prependFile('/dist/startui/scripts/tinymce/js/tinymce/tinymce.min.js')
+    ->prependFile('/dist/startui/js/app.js')
+    ->prependFile('/dist/startui/js/plugins.js')
+    ->prependFile('/dist/startui/js/lib/bootstrap/bootstrap.min.js')
+    ->prependFile('/dist/startui/js/lib/tether/tether.min.js')
+    ->prependFile('/dist/startui/js/lib/jquery/jquery.min.js');
+?>
+<div class="page-content <?php if($this->login()['userChainCount'] >0 ) { echo "padding-zero"; } ?>">
+    <div class="container-fluid">
+        <?php
+        /**
+         * @var \Zend\Form\Form $form
+         */
+        $form = $this->form;
+
+        /**
+         * @var \Zend\Form\Element $submitElement
+         */
+        $submitElement = $form->get('submit');
+        $submitElement->setAttribute('class', 'btn-inline btn-secondary');
+
+        $form->setAttribute('action', $this->url('scorm/post/scorm'));
+
+        echo $this->form()->openTag($form);
+        if ($form->get('id')->getValue()) {
+            $this->headTitle('Edit Scorm');
+            echo '<h3>Edit Scorm</h3>';
+        } else {
+            $this->headTitle('Add Scorm');
+            echo '<h4>Add Scorm</h4>';
+        }
+        echo $this->formRow($form->get('courseId'));
+        echo $this->formRow($form->get('parentId'));
+        echo $this->formRow($form->get('id'));
+        echo $this->formRow($form->get('uploads'));
+        echo $this->twbsFormRow($form->get('name'));
+        echo $this->twbsFormRow($form->get('summary'));
+        echo $this->twbsFormRow($form->get('tiny-image'));
+        echo '<div class="form-group"><label>Upload Package File</label><div class="dropzone"></div></div>';
+        echo $this->twbsFormRow($submitElement);
+        echo $this->form()->closeTag();
+        ?>
+    </div>
+</div>
+<?php
+$this->inlineScript()->captureStart();
+echo <<<JS
+    (function ( $ ) {
+        var uploadsInput = $('input[name="uploads"]');
+        var idInput = $('input[name="id"]');
+        Dropzone.autoDiscover = false;
+        var myDropzoneOptions = {
+            url: '/uploader/upload',
+            maxFiles: 1,
+            addRemoveLinks: true
+        };
+        var myDropzone = new Dropzone('.dropzone', myDropzoneOptions);
+        var uploads = $(uploadsInput).val();
+        if(uploads.length) {
+            $.ajax({
+              type: 'POST',
+                url: '/uploader/get',
+                data: 'uploads=' + uploads
+            }).done(function(data) {
+                $.each(data, function(key,value){
+                    var mockFile = {uploadId: value.id, name: value.name, size: value.size, accepted: true};
+                    myDropzone.emit('addedfile', mockFile);
+                    switch (value.type) {
+                        case 'application/pdf':
+                            myDropzone.emit('thumbnail', mockFile, '/dist/startui/images/pdf-icon.png');
+                            break;
+                        case 'application/msword':
+                            myDropzone.emit('thumbnail', mockFile, '/dist/startui/images/doc-icon.png');
+                            break;
+                        case 'application/vnd.openxmlformats-officedocument.wordprocessingml.document':
+                            myDropzone.emit('thumbnail', mockFile, '/dist/startui/images/doc-icon.png');
+                            break;
+                        case 'application/vnd.ms-excel':
+                            myDropzone.emit('thumbnail', mockFile, '/dist/startui/images/excel-icon.png');
+                            break;
+                        case 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet':
+                            myDropzone.emit('thumbnail', mockFile, '/dist/startui/images/excel-icon.png');
+                            break;
+                        case 'application/octet-stream':
+                            myDropzone.emit('thumbnail', mockFile, '/dist/startui/images/zip-icon.png');
+                            break;
+                        case 'application/zip':
+                            myDropzone.emit('thumbnail', mockFile, '/dist/startui/images/zip-icon.png');
+                            break;
+                        default: 
+                            myDropzone.emit('thumbnail', mockFile, '/uploader/view/' + value.unique_key);
+                    }
+                    myDropzone.emit('complete', mockFile);
+                    myDropzone.files.push(mockFile);
+                });
+            });
+        }
+        myDropzone.on('success', function (file, response) {
+            file.uploadId = response.id;
+            var uploads = $(uploadsInput).val();
+            if(uploads.length) {
+                uploads = JSON.parse(uploads);
+            } else {
+                uploads = {};
+            }
+            uploads[response.id] = response.id;
+            uploads = JSON.stringify(uploads);
+            $(uploadsInput).val(uploads);
+        });
+        myDropzone.on('addedfile', function (file) {
+            switch (file.type) {
+                case 'application/pdf':
+                    myDropzone.emit("thumbnail", file, '/dist/startui/images/pdf-icon.png');
+                    break;
+                case 'application/vnd.openxmlformats-officedocument.wordprocessingml.document':
+                    myDropzone.emit("thumbnail", file, '/dist/startui/images/doc-icon.png');
+                    break;
+                case 'application/msword':
+                    myDropzone.emit("thumbnail", file, '/dist/startui/images/doc-icon.png');
+                    break;
+                case 'application/vnd.ms-excel':
+                    myDropzone.emit("thumbnail", file, '/dist/startui/images/excel-icon.png');
+                    break;
+                case 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet':
+                    myDropzone.emit("thumbnail", file, '/dist/startui/images/excel-icon.png');
+                    break;
+                case 'application/octet-stream':
+                    myDropzone.emit('thumbnail', file, '/dist/startui/images/zip-icon.png');
+                    break;
+                case 'application/zip':
+                    myDropzone.emit('thumbnail', file, '/dist/startui/images/zip-icon.png');
+                    break;
+            }
+        });
+        myDropzone.on('removedfile', function (file) {
+            if(file.uploadId) {
+                if (0 === $(idInput).length) {
+                    $.ajax({
+                        type: 'POST',
+                        url: '/uploader/delete',
+                        data: 'id=' + file.uploadId
+                    });    
+                }
+                var uploads = $(uploadsInput).val();
+                if(uploads.length) {
+                    uploads = JSON.parse(uploads);
+                    delete uploads[file.uploadId];
+                    uploads = JSON.stringify(uploads);
+                    $(uploadsInput).val(uploads);
+                }
+            }
+        });
+        tinymce.init({ 
+            selector: 'textarea[name="summary"]',
+            height: 400,
+            plugins: [
+                "advlist autolink lists link image charmap print preview hr searchreplace wordcount code fullscreen table contextmenu paste textcolor colorpicker"
+            ],
+            toolbar1: "undo redo styleselect bold italic forecolor backcolor alignleft aligncenter alignright alignjustify bullist numlist outdent indent link image print preview code",
+            images_upload_url: '/uploader/upload',
+            file_picker_callback: function(callback, value, meta) {
+              if (meta.filetype == 'image') {
+                $('#tiny-image').trigger('click');
+                $('#tiny-image').on('change', function() {
+                  var file = this.files[0];
+                  var reader = new FileReader();
+                  reader.onload = function(e) {
+                    callback(e.target.result, {
+                      alt: ''
+                    });
+                  };
+                  reader.readAsDataURL(file);
+                });
+              }
+            },
+            setup: function (editor) {
+                editor.on('change', function () {
+                    editor.save();
+                });
+            }
+        });
+    })(jQuery);
+JS;
+$this->inlineScript()->captureEnd();

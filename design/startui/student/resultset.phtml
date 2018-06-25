@@ -1,0 +1,297 @@
+<?php
+/**
+ * @var User\Model\User $user
+ */
+$this->headLink()
+    ->prependStylesheet('/dist/startui/css/custom.css')
+    ->prependStylesheet('/dist/startui/css/main.css')
+    ->prependStylesheet('/dist/startui/css/lib/bootstrap/bootstrap.min.css')
+    ->prependStylesheet('/dist/startui/css/lib/font-awesome/font-awesome.min.css')
+    ->prependStylesheet('/dist/startui/css/separate/vendor/datatables-net.min.css')
+    ->prependStylesheet('/dist/startui/css/lib/datatables-net/datatables.min.css');
+$this->inlineScript()
+    ->prependFile('/dist/startui/scripts/validator/magic.js')
+    ->prependFile('/dist/startui/scripts/tinymce/js/tinymce/tinymce.min.js')
+    ->prependFile('/dist/startui/js/app.js')
+    ->prependFile('/dist/startui/js/lib/datatables-net/datatables.min.js')
+    ->prependFile('/dist/startui/js/lib/bootstrap-datepicker/js/bootstrap-datepicker.min.js')
+    ->prependFile('/dist/startui/js/plugins.js')
+    ->prependFile('/dist/startui/js/lib/bootstrap/bootstrap.min.js')
+    ->prependFile('/dist/startui/js/lib/tether/tether.min.js')
+    ->prependFile('/dist/startui/js/lib/jquery/jquery.min.js');
+$this->headTitle('Students');
+
+$this->inlineScript()->captureStart();
+echo <<<JS
+
+/*
+    $.fn.dataTable.ext.search.push(
+        function( settings, data, dataIndex ) {
+     
+            //if the TD/TH positions changes, this index will move 
+            console.log(data);
+            var filterDate = data[7];
+            var datePieces = filterDate.split('/');
+            filterDate = new Date(datePieces[2], datePieces[1]-1, datePieces[0], 0, 0, 0, 0);
+
+            var minDate = false;
+            var maxDate = false;
+
+            if($("#searchdatemin").val() != "") {
+                minPieces = $("#searchdatemin").val().split("-");
+                minDate = new Date(minPieces[0], minPieces[1]-1, minPieces[2], 0, 0, 0, 0);
+            }
+
+            if($("#searchdatemax").val() != "") {
+                maxPieces = $("#searchdatemin").val().split("-");
+                maxDate = new Date(maxPieces[0], maxPieces[1]-1, maxPieces[2], 0, 0, 0, 0);
+            }
+
+            console.log(filterDate);
+            console.log(maxDate);
+            console.log(minDate);
+
+            return true;
+
+
+    
+            if(!minDate && !maxDate) {
+                return true
+            }
+            return true;
+
+
+
+            if ( ( isNaN( min ) && isNaN( max ) ) ||
+                 ( isNaN( min ) && age <= max ) ||
+                 ( min <= age   && isNaN( max ) ) ||
+                 ( min <= age   && age <= max ) )
+            {
+                return true;
+            }
+            return false;
+           
+
+        }
+);
+*/ 
+
+    (function ($) {
+        // Setup - add a text input to each header cell with class .searchtext
+        $('#user-table thead th.searchtext').each( function () {
+            var title = $(this).text();
+            $(this).html( title + '<br /><input type="text" class="searchtextinput" placeholder="Search '+title+'" />' );
+        } );
+
+        // Setup - add date inputs to each header cell with class .searchdate
+        $('#user-table thead th.searchdate').each( function () {
+            var title = $(this).text();
+            $(this).html( title + '<br /><input id="searchdatemin" type="date" class="searchdateinput" placeholder="Search '+title+'" /><br /><input  id="searchdatemax" type="date" class="searchdateinput" placeholder="Search '+title+'" />' );
+        } );
+
+        //initialise datatable
+        var table = $('#user-table').DataTable({
+            'aaSorting': [],
+            //add dropdown filters to .searchdrop fields
+            initComplete: function () {
+            this.api().columns('.searchdrop').every( function () {
+                var column = this;
+                var select = $('<br /><select class="searchdropinput"><option value=""></option></select>')
+                    .appendTo( $(column.header()) )
+                    .on( 'change', function () {
+                        var val = $.fn.dataTable.util.escapeRegex(
+                            $(this).val()
+                        );
+ 
+                        column
+                            .search( val ? '^'+val+'$' : '', true, false )
+                            .draw();
+                    } ).on("click", function(e){
+                      e.stopPropagation();
+                    });
+ 
+                column.data().unique().sort().each( function ( d, j ) {
+                    select.append( '<option value="'+d+'">'+d+'</option>' )
+                } );
+            } );
+        }
+
+
+        });
+
+        // Apply the text search
+        table.columns('.searchtext').every( function () {
+            var that = this;
+     
+            $( 'input', this.header() ).on( 'keyup change', function () {
+                if ( that.search() !== this.value ) {
+                    that
+                        .search( this.value )
+                        .draw();
+                }
+            } ).on("click", function(e){
+              e.stopPropagation();
+            });
+        } );
+
+
+
+        // Apply the date search
+        table.columns('.searchdate').every( function () {
+            var that = this;
+     
+            $( 'input', this.header() ).on( 'keyup change', function () {
+
+                if ( that.search() !== this.value ) {
+                   
+
+                        console.log(typeof this.value + " :" + this.value + ":");
+                        console.log(typeof that.search() + " :" + that.search() + ":");
+
+                    that
+                        .search( this.value )
+                        .draw();
+
+                }
+            } ).on("click", function(e){
+              e.stopPropagation();
+            });
+        } );
+
+
+
+
+
+        
+
+        
+
+        //make each row clickable, redirect to the user details page
+        $('#user-table tbody').on('click', 'tr', function () {
+            window.location.href = "/student/user/" + $(this).data("id");
+        });
+
+        //highlight hovered rows to denote clickable
+        $('#user-table tbody').on('mouseenter', 'tr', function () {
+            $(this).addClass('table-info');
+            $(this).css( 'cursor', 'pointer' );
+        });
+
+        $('#user-table tbody').on('mouseleave', 'tr', function () {
+            $(this).removeClass('table-info');
+            $(this).css( 'cursor', 'default' );
+        });
+
+
+    })(jQuery);
+JS;
+$this->inlineScript()->captureEnd();
+?>
+<!--
+<style>
+#user-table td, th {
+    font-size: 8pt;
+}
+
+input.searchtextinput {
+    max-width: 75px;
+    font-size: 8pt;
+}
+
+select.searchdropinput {
+    max-width: 75px;
+    font-size: 8pt;
+}
+</style>
+-->
+
+<div class="page-content <?php if($this->login()['userChainCount'] >0 ) { echo "padding-zero"; } ?>">
+    <div class="container-fluid">
+        <?php if (\Rbac\Role\Administrator::class === $this->identity()->getRole()) { ?>
+            <a href="<?php echo $this->url('student/form/student'); ?>" class="btn btn-inline btn-secondary">Add Student</a><br><br>
+        <?php } ?>
+        <?php if (count($this->resultSet) > 0) { 
+
+            $isTutor = (\Rbac\Role\Tutor::class === $this->identity()->getRole());
+        ?>
+        <form action="<?php echo $this->url('student/user/view/resultset'); ?>" method="get">
+            <!--<input value="<?php echo $this->search['identity'] ?? ''; ?>" type="text" placeholder="Search Student" name="search[identity]" class="form-control search-student" onblur="this.form.submit()">-->
+            <br>
+            <table id="user-table" class="display table table-striped table-bordered" cellspacing="0" width="100%">
+                <thead>
+                <tr>
+                    <th class='searchtext'>First Name</th>
+                    <th class='searchtext'>Last Name</th>
+                    <th class='searchdrop'>Course</th>
+                    <?php if(!$isTutor) { ?><th class='searchdrop'>Tutor</th><?php } ?>
+                    <th class='searchtext'>End of Support</th>
+                    <?php if(!$isTutor) { ?><th class='searchtext'>Email</th><?php } ?>
+                    <?php if(!$isTutor) { ?><th class='searchtext'>Phone</th><?php } ?>
+                    <?php if(!$isTutor) { ?><th class='searchtext'>Username</th><?php } ?>
+                    <th class='searchtext'>HLN</th>
+                </tr>
+                </thead>
+                <tbody>
+                <?php foreach ($this->resultSet ?? [] as $resultUser) : 
+
+                    
+                   
+                    $userArray = $resultUser->getArrayCopy();
+                        
+                    //if no courses are attached to the user, we get errors
+                    if(!is_array($userArray['courseTutor'])) {
+                        ?>
+                            <tr class="clickable" data-id='<?php echo $resultUser->getId(); ?>'>
+                                <td><?php echo $resultUser->getFirstName(); ?></td>
+                                <td><?php echo $resultUser->getLastName(); ?></td>
+                                <td>NONE</td>
+                                <?php if(!$isTutor) { ?><td>NONE</td><?php } ?>
+                                <td>NONE</td>
+                                <?php if(!$isTutor) { ?><td><?php echo $resultUser->getIdentity(); ?></td><?php } ?>
+                                <?php if(!$isTutor) { ?><td><?php echo $resultUser->getPhone(); ?></td><?php } ?>
+                                <?php if(!$isTutor) { ?><td><?php echo $resultUser->getUsername(); ?></td><?php } ?>
+                                <td>NONE</td>
+                            </tr>
+                        <?php 
+                    } else {
+
+                        foreach($userArray['courseTutor'] as $data) {
+                            //if the user is a tutor and the tutorID in the user record is different, skip it
+                            if($isTutor && $data['tutor'] != $this->identity()->getId()) 
+                            { 
+                                continue; 
+                            }
+
+                            if(isset($data[' ']) && $data[' '] == 0) {
+                                $date = "-";
+                            } else {
+                                $date = date('d/m/Y', $data['end_of_support']);
+                            }
+
+                            $tutorName = $this->tutors[$data['tutor']];
+                            $courseName = $this->courses[$data['course']];
+
+                        ?>
+                            <tr class="clickable" data-id='<?php echo $resultUser->getId(); ?>'>
+                                <td><?php echo $resultUser->getFirstName(); ?></td>
+                                <td><?php echo $resultUser->getLastName(); ?></td>
+                                <td><?php echo $courseName; ?></td>
+                                <?php if(!$isTutor) { ?><td><?php echo $tutorName; ?></td><?php } ?>
+                                <td><?php echo $date; ?></td>
+                                <?php if(!$isTutor) { ?><td><?php echo $resultUser->getIdentity(); ?></td><?php } ?>
+                                <?php if(!$isTutor) { ?><td><?php echo $resultUser->getPhone(); ?></td><?php } ?>
+                                <?php if(!$isTutor) { ?><td><?php echo $resultUser->getUsername(); ?></td><?php } ?>
+                                <td><?php echo $data['HLN']; ?></td>
+                            </tr>
+                        <?php 
+                        }
+                    }
+                endforeach; ?>
+                </tbody>
+            </table>
+        </form>
+        <?php } else { ?>
+            No students assigned yet.
+        <?php } ?>
+    </div>
+</div>

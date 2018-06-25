@@ -1,0 +1,54 @@
+<?php
+/**
+ * @var User\Model\User $user
+ */
+
+$user = $this->user;
+
+$this->headTitle($user->getFirstName() . ' ' . $user->getLastName());
+$this->headLink()
+    ->prependStylesheet('/dist/startui/css/custom.css')
+    ->prependStylesheet('/dist/startui/css/main.css')
+    ->prependStylesheet('/dist/startui/css/lib/bootstrap/bootstrap.min.css')
+    ->prependStylesheet('/dist/startui/css/lib/font-awesome/font-awesome.min.css')
+    ->prependStylesheet('/dist/startui/scripts/dropzone/dropzone.css');
+$this->inlineScript()
+    ->prependFile('/dist/startui/scripts/validator/magic.js')
+    ->prependFile('/dist/startui/js/app.js')
+    ->prependFile('/dist/startui/js/plugins.js')
+    ->prependFile('/dist/startui/js/lib/bootstrap/bootstrap.min.js')
+    ->prependFile('/dist/startui/js/lib/tether/tether.min.js')
+    ->prependFile('/dist/startui/js/lib/jquery/jquery.min.js');
+?>
+<div class="page-content">
+    <div class="container-fluid">
+        <div class="panel panel-default">
+            <table class="table">
+                <thead>
+                <tr>
+                    <th>First Name</th>
+                    <th>Last Name</th>
+                    <th>Email</th>
+                    <th>Phone</th>
+                    <th>Address</th>
+                    <th>Overdue</th>
+                    <th>Unmarked</th>
+                    <th></th>
+                </tr>
+                </thead>
+                <tbody>
+                <tr>
+                    <td><?php echo $user->getFirstName(); ?></td>
+                    <td><?php echo $user->getLastName(); ?></td>
+                    <td><?php echo $user->getIdentity(); ?></td>
+                    <td><?php echo $user->getPhone(); ?></td>
+                    <td><?php echo ucfirst($user->getAddress()); ?></td>
+                    <td><a href="<?php echo $this->url('assignment/view/work/resultset', ['filter' => 'overdue']); ?>?tutor=<?php echo $user->getId(); ?>"><?php echo count($this->assignmentWork()->byTutorOverdue($user->getId())); ?></a></td>
+                    <td><?php echo count($this->assignmentWork()->byTutorUnmarked($user->getId())); ?></td>
+                    <td><a class="btn btn-inline btn-secondary" href="<?php echo $this->url('tutor/form/tutor', ['id' => $user->getId()]); ?>">Edit</a></td>
+                </tr>
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>

@@ -1,0 +1,71 @@
+<?php
+$this->headTitle('New Password');
+$this->headLink()
+    ->prependStylesheet('/dist/startui/css/main.css')
+    ->prependStylesheet('/dist/startui/css/lib/bootstrap/bootstrap.min.css')
+    ->prependStylesheet('/dist/startui/css/lib/font-awesome/font-awesome.min.css')
+    ->prependStylesheet('/dist/startui/css/separate/pages/login.min.css');
+
+$this->inlineScript()
+    ->prependFile('/dist/startui/scripts/validator/magic.js')
+    ->prependFile('/dist/startui/js/app.js')
+    ->prependFile('/dist/startui/js/lib/match-height/jquery.matchHeight.min.js')
+    ->prependFile('/dist/startui/js/plugins.js')
+    ->prependFile('/dist/startui/js/lib/bootstrap/bootstrap.min.js')
+    ->prependFile('/dist/startui/js/lib/tether/tether.min.js')
+    ->prependFile('/dist/startui/js/lib/jquery/jquery.min.js');
+?>
+
+<?php
+/**
+ * @var \Zend\Form\Form $form
+ */
+$form = $this->form;
+?>
+
+<div class="page-center">
+    <div class="page-center-in">
+        <div class="container-fluid">
+            <?php
+            $form->setAttribute('action', $this->url('user/post/newpass'));
+            $form->setAttribute('class', 'sign-box reset-password-box');
+            ?>
+            <?php echo $this->form()->openTag($form); ?>
+                <header class="sign-title">New Password</header>
+                <div class="form-group">
+                    <input type="hidden" name="pin" value="<?php echo $this->pin; ?>" />
+                </div>
+                <div class="form-group">
+                    <?php echo $this->twbsFormRow($form->get('password')->setAttribute('placeholder', 'New Password')->setLabel('')); ?>
+                </div>
+                <div class="form-group">
+                    <?php echo $this->twbsFormRow($form->get('vpassword')->setAttribute('placeholder', 'Confirm New Password')->setLabel('')); ?>
+                </div>
+                <button type="submit" class="btn btn-rounded btn-block">Submit</button>
+            <?php echo $this->form()->closeTag(); ?>
+        </div>
+    </div>
+</div>
+
+<?php
+
+$this->inlineScript()->captureStart();
+echo <<<JS
+    (function ( $ ) {
+        $(function() {
+            $('.page-center').matchHeight({
+                target: $('html')
+            });
+
+            $(window).resize(function(){
+                setTimeout(function(){
+                    $('.page-center').matchHeight({ remove: true });
+                    $('.page-center').matchHeight({
+                        target: $('html')
+                    });
+                },100);
+            });
+        });
+    })(jQuery);
+JS;
+$this->inlineScript()->captureEnd();

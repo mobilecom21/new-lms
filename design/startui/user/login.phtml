@@ -1,0 +1,85 @@
+<?php
+$this->headTitle('Login');
+$this->headLink()
+    ->prependStylesheet('/dist/startui/css/main.css')
+    ->prependStylesheet('/dist/startui/css/lib/bootstrap/bootstrap.min.css')
+    ->prependStylesheet('/dist/startui/css/lib/font-awesome/font-awesome.min.css')
+    ->prependStylesheet('/dist/startui/css/separate/pages/login.min.css');
+
+$this->inlineScript()
+    ->prependFile('/dist/startui/scripts/validator/magic.js')
+    ->prependFile('/dist/startui/js/app.js')
+    ->prependFile('/dist/startui/js/lib/match-height/jquery.matchHeight.min.js')
+    ->prependFile('/dist/startui/js/plugins.js')
+    ->prependFile('/dist/startui/js/lib/bootstrap/bootstrap.min.js')
+    ->prependFile('/dist/startui/js/lib/tether/tether.min.js')
+    ->prependFile('/dist/startui/js/lib/jquery/jquery.min.js');
+?>
+
+<?php
+/**
+ * @var \Zend\Form\Form $form
+ */
+$form = $this->form;
+?>
+
+    <div class="page-center">
+        <div class="page-center-in">
+            <div class="container-fluid">
+                <?php
+                $form->setAttribute('action', $this->url('user/post/authenticate'));
+                $form->setAttribute('class', 'sign-box');
+                ?>
+                <?php echo $this->form()->openTag($form); ?>
+                <div class="sign-avatar">
+                    <img src="/dist/startui/img/logo.png" alt="">
+                </div>
+                <header class="sign-title">Sign In</header>
+                <div class="form-group">
+                    <?php echo $this->twbsFormRow($form->get('identity')->setAttribute('placeholder', 'E-Mail or Username')->setLabel('')); ?>
+                </div>
+                <div class="form-group">
+                    <?php echo $this->twbsFormRow($form->get('password')->setAttribute('placeholder', 'Password')->setLabel('')); ?>
+                </div>
+                <div class="form-group text-center">
+                    <a href="<?php echo $this->url('user/form/reset'); ?>">Reset Password</a>
+                </div>
+                <button type="submit" class="btn btn-rounded">Sign in</button>
+                <?php echo $this->form()->closeTag(); ?>
+                <?php
+                $form->setAttribute('action', $this->url('user/post/authenticate'));
+                $form->setAttribute('id', 'login-pin');
+                $form->setAttribute('class', 'sign-box pin');
+                $form->setAttribute('style', 'margin-top: 20px');
+                echo $this->form()->openTag($form);
+                echo '<p class="sign-note">Enter PIN to sign in</p>';
+                echo $this->twbsFormRow($form->get('pin')->setAttribute('placeholder', 'PIN')->setLabel(''));
+                echo '<button type="submit" class="btn btn-rounded">Sign in</button>';
+                echo $this->form()->closeTag();
+                ?>
+            </div>
+        </div>
+    </div><!--.page-center-->
+
+<?php
+
+$this->inlineScript()->captureStart();
+echo <<<JS
+    (function ( $ ) {
+        $(function() {
+            $('.page-center').matchHeight({
+                target: $('html')
+            });
+
+            $(window).resize(function(){
+                setTimeout(function(){
+                    $('.page-center').matchHeight({ remove: true });
+                    $('.page-center').matchHeight({
+                        target: $('html')
+                    });
+                },100);
+            });
+        });
+    })(jQuery);
+JS;
+$this->inlineScript()->captureEnd();

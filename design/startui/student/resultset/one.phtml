@@ -1,0 +1,9 @@
+<?php
+/**
+ * @var User\Model\User $user
+ */
+$user = $this->user;
+?>
+<p>
+    <a href="<?php echo $this->url('student/user/view/single', ['id' => $user->getId()]); ?>"><?php echo $user->getIdentity(); ?></a>
+</p>

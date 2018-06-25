@@ -1,0 +1,39 @@
+<div class="page-content <?php if($this->login()['userChainCount'] >0 ) { echo "padding-zero"; } ?>">
+    <div class="container-fluid">
+        <p><strong>Send message to <?php echo $this->userName; ?></strong></p>
+        <?php
+        /**
+         * @var \Zend\Form\Form $form
+         */
+        $this->headLink()
+            ->prependStylesheet('/dist/startui/css/custom.css')
+            ->prependStylesheet('/dist/startui/css/main.css')
+            ->prependStylesheet('/dist/startui/css/lib/bootstrap/bootstrap.min.css')
+            ->prependStylesheet('/dist/startui/css/lib/font-awesome/font-awesome.min.css');
+        $this->inlineScript()
+            ->prependFile('/dist/startui/scripts/validator/magic.js')
+            ->prependFile('/dist/startui/scripts/tinymce/js/tinymce/tinymce.min.js')
+            ->prependFile('/dist/startui/js/app.js')
+            ->prependFile('/dist/startui/js/plugins.js')
+            ->prependFile('/dist/startui/js/lib/bootstrap/bootstrap.min.js')
+            ->prependFile('/dist/startui/js/lib/tether/tether.min.js')
+            ->prependFile('/dist/startui/js/lib/jquery/jquery.min.js');
+        $this->headTitle('Messages');
+
+        $form = $this->form;
+
+        /**
+         * @var \Zend\Form\Element $submitElement
+         */
+        $submitElement = $form->get('submit');
+        $submitElement->setAttribute('class', 'btn-inline btn-secondary');
+
+        $form->setAttribute('action', $this->url('message/post/mail', ['userId' => $this->userId]));
+        echo $this->form()->openTag($form);
+        echo $this->twbsFormRow($form->get('text')->setAttribute('rows', '25'));
+
+        echo $this->twbsFormRow($submitElement);
+        echo $this->form()->closeTag();
+        ?>
+    </div>
+</div>

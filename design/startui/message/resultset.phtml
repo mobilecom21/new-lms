@@ -1,0 +1,385 @@
+<?php
+$this->headLink()
+    ->prependStylesheet('/dist/startui/css/custom.css')
+    ->prependStylesheet('/dist/startui/css/main.css')
+    ->prependStylesheet('/dist/startui/css/lib/bootstrap/bootstrap.min.css')
+    ->prependStylesheet('/dist/startui/css/lib/font-awesome/font-awesome.min.css')
+    ->prependStylesheet('/dist/startui/css/separate/pages/mail.min.css')
+    ->prependStylesheet('/dist/startui/css/separate/pages/editor.min.css')
+    ->prependStylesheet('/dist/startui/css/lib/summernote/summernote.css');
+$this->inlineScript()
+    ->prependFile('/dist/startui/js/lib/summernote/summernote.min.js')
+    ->prependFile('/dist/startui/scripts/validator/magic.js')
+    ->prependFile('/dist/startui/scripts/tinymce/js/tinymce/tinymce.min.js')
+    ->prependFile('/dist/startui/js/app.js')
+    ->prependFile('/dist/startui/js/plugins.js')
+    ->prependFile('/dist/startui/js/lib/bootstrap/bootstrap.min.js')
+    ->prependFile('/dist/startui/js/lib/tether/tether.min.js')
+    ->prependFile('/dist/startui/js/lib/jquery/jquery.min.js');
+$this->headTitle('Messages');
+?>
+<?php
+$this->inlineScript()->captureStart();
+echo <<<JS
+    (function ( $ ) {
+        $('.summernote').summernote({
+            height: 300,
+            popover: {
+                image: [],
+                link: [],
+                air: []
+            },
+            toolbar: [
+                ['style', ['bold', 'italic', 'underline']],
+                ['color', ['color']],
+                ['para', ['paragraph', 'ul', 'ol']],
+                ['table', ['table']],
+                ['misc', ['fullscreen']],
+            ],
+            disableDragAndDrop: true
+        });
+        $(document).on('click', '.mail-box-item', function() {
+            $('.mail-box-item').removeClass('selected');
+            $('.mail-box-item').addClass('selected-line');
+            $(this).removeClass('selected-line');
+            $(this).addClass('selected');
+            var id = $(this).attr('data-id');
+            $('.mail-box-work-area').addClass('hidden');
+            $('.mail-box-work-area-' + id).removeClass('hidden');
+        });
+        $(document).on('click', '.btn-reload', function() {
+            location.reload();
+        });
+        $(document).on('click', '.clear-message', function() {
+            $(".summernote").summernote('code', '');
+        });
+        $(document).on('click', '.message-trash', function() {
+            if (confirm('If deleted these messages will not be retrievable, do you wish to continue?')) {
+                $.ajax({
+                    type: 'POST',
+                    url: '/message/delete',
+                    data: 'userId=' + $(this).attr('data-id')
+                }).done(function() {
+                    location.reload();
+                });
+            }
+        });
+        $(document).on('click', '.unviewed', function() {
+            $(this).removeClass('unviewed');
+            var group = $(this).attr('data-group');
+            var unviewedGroup = $('.unviewed-group-' + group);
+            var unviewed = $(unviewedGroup).text();
+            unviewed = Number(unviewed) - 1;
+            if (unviewed > 0) {
+                $(unviewedGroup).text(unviewed);
+            } else {
+                $(unviewedGroup).text('');
+            }
+            $.get('/message/unread',function(data) {
+                if (data['unread'] > 0) {
+                    $(".font-icon-mail" ).addClass('active');
+                    $(".font-icon-mail" ).parent().find('span').text('Messages (' + data['unread'] + ')');
+                }
+            });
+            $.ajax({
+                type: 'POST',
+                url: '/message/viewed',
+                data: 'id=' + $(this).attr('data-id')
+            });
+        });
+        $(document).on('click', '.mail-box-letter-item', function() {
+            $(this).parent().find('.mail-box-letter-opened').addClass('hidden');
+            $(this).parent().find('.mail-box-letter-item').removeClass('hidden');
+            $(this).addClass('hidden');
+            $(this).next().removeClass('hidden');
+        });
+        $(document).on('click', '.show-mails', function(e) {
+            e.preventDefault();
+            $('.section-contacts-wrap').addClass('hidden');
+            $('.section-mails-wrap').removeClass('hidden');
+            $(".show-contacts").removeClass('active');
+            $(".show-mails").addClass('active');
+            $('.contacts').addClass('hidden');
+            $('.mails').removeClass('hidden');
+        });
+        $(document).on('click', '.show-contacts', function(e) {
+            e.preventDefault();
+            $('.section-mails-wrap').addClass('hidden');
+            $('.section-contacts-wrap').removeClass('hidden');
+            $(".show-mails").removeClass('active');
+            $(".show-contacts").addClass('active');
+            $('.mails').addClass('hidden');
+            $('.contacts').removeClass('hidden');
+        });
+        $(document).on('click', '.show-on-click-btn', function(e) {
+            $(this).parent().find('.show-on-click').each(function() {
+                $(this).removeClass('show-on-click');
+            });
+            $('.show-on-click-btn').remove();
+        });
+    })(jQuery);
+JS;
+$this->inlineScript()->captureEnd();
+?>
+
+<?php
+/**
+ * @var Message\Model\Message $message
+ */
+
+
+$logged_id = $this->identity()->getId();
+
+?>
+
+<div class="page-content <?php if($this->login()['userChainCount'] >0 ) { echo "padding-zero"; } ?>">
+    <div class="container-fluid">
+        <?php if (count($this->results) > 0 || count($this->contacts) > 0) { ?>
+        <section class="box-typical mail-box">
+            <header class="mail-box-header">
+                <div class="mail-box-header-left">
+                    <div class="btns-icon">
+                        <button type="button" class="btn-icon btn-reload"><i class="font-icon font-icon-refresh-2"></i></button>
+                    </div>
+                </div>
+                <div class="mail-box-header-right">
+                    <ul class="mail-box-header-nav">
+                        <li><a href="#" class="active show-mails">Mails</a></li>
+                        <li><a href="#" class="show-contacts">Contacts</a></li>
+                    </ul>
+                    <div class="search">
+                        <form action="<?php echo $this->url('message/view/resultset'); ?>" method="get">
+                        <input type="text" name="search" value="<?php echo $this->search; ?>" class="form-control form-control-rounded" onblur="this.form.submit()" placeholder="Search"/>
+                        <button type="submit" class="btn-icon"><i class="font-icon font-icon-search"></i></button>
+                        </form>
+                    </div>
+                </div>
+            </header><!--.mail-box-header-->
+            <section class="mail-box-list scrollable-block contacts hidden">
+                <?php $i = 0; ?>
+                <?php foreach ($this->contacts as $key => $group) { ?>
+                    <?php
+                        if (0 == count($group)) {
+                            continue;
+                        }
+                        $last = end($group);
+                    ?>
+                    <div class="mail-box-item <?php if (0 == $i) { echo 'selected'; } else { echo 'selected-line'; } ?>" data-id="<?php echo $key; ?>">
+                        <div class="mail-box-item-header">
+                            <div class="mail-box-item-photo">
+                                <img src="/dist/startui/img/avatar-2-64.png" alt="">
+                            </div>
+                            <div class="tbl mail-box-item-head-tbl">
+                                <div class="tbl-row">
+                                    <div class="tbl-cell">
+                                        <div class="tbl mail-box-item-user-tbl">
+                                            <div class="tbl-row">
+                                                <div class="tbl-cell tbl-cell-name"><?php echo $last['first_name'] . ' ' . $last['last_name']; ?></div>
+                                                <?php if (! empty($last['status'])) { ?>
+                                                    <div class="tbl-cell tbl-cell-status">
+                                                        <div class="online"></div>
+                                                    </div>
+                                                <?php } ?>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div><!--.mail-box-item-->
+                    <?php $i++; ?>
+                <?php } ?>
+            </section>
+            <section class="mail-box-list scrollable-block mails">
+                <?php $i = 0; ?>
+                <?php foreach ($this->results as $key => $group) { ?>
+                    <?php
+                        if (0 == count($group)) {
+                            continue;
+                        }
+                        krsort($group);
+                        $last = end($group);
+                        $unviewed = 0;
+                        foreach ($group as $message) {
+                            if (empty($message['viewed']) && $message['receiver'] == $logged_id) {
+                                $unviewed++;
+                            }
+                        }
+                    ?>
+                    <div class="mail-box-item <?php if (0 == $i) { echo 'selected'; } else { echo 'selected-line'; } ?>" data-id="<?php echo $key; ?>">
+                        <div class="mail-box-item-header">
+                            <div class="mail-box-item-photo">
+                                <img src="/dist/startui/img/avatar-2-64.png" alt="">
+                            </div>
+                            <div class="tbl mail-box-item-head-tbl">
+                                <div class="tbl-row">
+                                    <div class="tbl-cell">
+                                        <div class="tbl mail-box-item-user-tbl">
+                                            <div class="tbl-row">
+                                                <div class="tbl-cell tbl-cell-name"><?php echo $last['first_name'] . ' ' . $last['last_name']; ?></div>
+                                                <div class="tbl-cell tbl-cell-new">
+                                                    <?php if ($unviewed > 0) { ?>
+                                                        <span class="label label-pill label-danger unviewed-group-<?php echo $key; ?>"><?php echo $unviewed; ?></span>
+                                                    <?php } ?>
+                                                </div>
+                                                <?php if (! empty($last['status'])) { ?>
+                                                    <div class="tbl-cell tbl-cell-status">
+                                                        <div class="online"></div>
+                                                    </div>
+                                                <?php } ?>
+                                            </div>
+                                        </div>
+                                    </div>
+                                    <div class="tbl-cell tbl-cell-date"><button type="button" class="btn-icon message-trash" data-id="<?php echo $key; ?>"><i class="font-icon font-icon-trash"></i></button></div>
+                                </div>
+                            </div>
+                            <div class="mail-box-letter-item-txt"><?php echo ! empty($message['text']->Message) ? strip_tags($message['text']->Message) : ''; ?></div>
+                        </div>
+                    </div><!--.mail-box-item-->
+                    <?php $i++; ?>
+                <?php } ?>
+            </section>
+            <?php $i = 0; ?>
+            <div class="section-mails-wrap">
+                <?php foreach ($this->results as $key => $group) { ?>
+                    <?php
+                        if (0 == count($group)) {
+                            continue;
+                        }
+                        krsort($group);
+                        $last = end($group);
+                    ?>
+                    <section class="mail-box-work-area mail-box-work-area-<?php echo $key; ?> <?php if ($i > 0) { echo 'hidden'; } ?>">
+                        <div class="mail-box-work-area-in">
+                            <div class="mail-box-work-area-cont  scrollable-block">
+                                <?php $j = 1; ?>
+                                <?php foreach ($group as $message) { ?>
+                                    <?php
+                                        $extra_class = '';
+                                        if ($message['receiver'] == $logged_id && 0 == $message['viewed']) {
+                                            $extra_class = 'unviewed';
+                                        }
+                                    ?>
+                                    <div class="mail-box-letter-item <?php if ($j > 3) { echo 'show-on-click'; } ?> <?php echo $extra_class; ?>" data-group="<?php echo $key; ?>" data-id="<?php echo $message['id']; ?>">
+                                        <div class="mail-box-letter-item-in">
+                                            <div class="mail-box-letter-item-photo">
+                                                <img src="/dist/startui/img/avatar-2-64.png" alt="">
+                                            </div>
+                                            <div class="mail-box-letter-item-header tbl">
+                                                <div class="tbl-row">
+                                                    <div class="tbl-cell tbl-cell-name">
+                                                        <?php
+                                                        if ($logged_id == $message['receiver']) {
+                                                            echo $message['first_name'] . ' ' . $message['last_name'];
+                                                        } else {
+                                                            echo $this->identity()->getFirstName() . ' ' . $this->identity()->getLastName();
+                                                        }
+                                                        ?>
+                                                    </div>
+                                                    <div class="tbl-cell tbl-cell-date"><?php echo $message['created_at']->format('F j, Y, g:i a'); ?></div>
+                                                </div>
+                                            </div>
+                                            <div class="mail-box-letter-item-txt"><?php echo strip_tags($message['text']->Message); ?></div>
+                                        </div>
+                                    </div><!--.mail-box-letter-item-->
+                                    <div class="mail-box-letter-opened hidden">
+                                        <div class="mail-box-letter-opened-header tbl">
+                                            <div class="tbl-row">
+                                                <div class="tbl-cell tbl-cell-name">
+                                                    <?php
+                                                    if ($logged_id == $message['receiver']) {
+                                                        echo $message['first_name'] . ' ' . $message['last_name'];
+                                                    } else {
+                                                        echo $this->identity()->getFirstName() . ' ' . $this->identity()->getLastName();
+                                                    }
+                                                    ?>
+                                                </div>
+                                                <div class="tbl-cell tbl-cell-date"></div>
+                                            </div>
+                                        </div><!--.mail-box-letter-opened-header-->
+                                        <div class="text-block text-block-typical">
+                                            <?php
+                                                $message_content = (array) $message['text'];
+                                            ?>
+                                            <?php foreach ($message_content as $label => $value) { ?>
+                                                <?php if ('Message' == $label) { $label = ''; } ?>
+                                                <p><?php echo $label; ?> <?php echo $value; ?></p>
+                                            <?php } ?>
+                                        </div><br>
+                                    </div><!--.mail-box-letter-opened-->
+                                    <?php $j++; ?>
+                                <?php } ?>
+                                <?php if ($j > 3) { ?>
+                                    <p class="text-center show-on-click-btn">Show More</p>
+                                <?php } ?>
+                                <form action="<?php echo $this->url('message/post/mail', ['userId' => $key]); ?>" method="POST">
+                                    <div class="summernote-theme-1">
+                                        <textarea name="text" placeholder="Type your message here..." class="form-control summernote"></textarea>
+                                    </div>
+                                    <div class="chat-area-bottom">
+                                        <button type="submit" class="btn btn-rounded float-left">Send</button>
+                                        <button type="reset" class="btn btn-rounded btn-default float-left clear-message">Clear</button>
+                                    </div><!--.chat-area-bottom-->
+                                </form>
+                            </div><!--.mail-box-work-area-cont-->
+                        </div><!--.main-box-work-area-in-->
+                    </section><!--.mail-box-work-area-->
+                    <?php $i++; ?>
+                <?php } ?>
+            </div>
+
+            <?php $i = 0; ?>
+            <div class="section-contacts-wrap hidden">
+            <?php foreach ($this->contacts as $key => $group) { ?>
+                <?php
+                if (0 == count($group)) {
+                    continue;
+                }
+                krsort($group);
+                $last = end($group);
+                ?>
+                <section class="mail-box-work-area mail-box-work-area-<?php echo $key; ?> <?php if ($i > 0) { echo 'hidden'; } ?>">
+                    <div class="mail-box-work-area-in">
+                        <header class="mail-box-work-area-header">
+                            <div class="tbl">
+                                <div class="tbl-row">
+                                    <div class="tbl-cell">
+                                        <div class="user-card-row">
+                                            <div class="tbl-row">
+                                                <div class="tbl-cell tbl-cell-photo">
+                                                    <a target="_blank" href="<?php echo $this->url('student/user/view/single', ['id' => $last['sender']]); ?>">
+                                                        <img src="/dist/startui/img/avatar-2-64.png" alt="">
+                                                    </a>
+                                                </div>
+                                                <div class="tbl-cell">
+                                                    <div class="user-card-row-name"><?php echo $last['first_name'] . ' ' . $last['last_name']; ?></div>
+                                                </div>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </header><!--.mail-box-work-area-header-->
+
+                        <div class="mail-box-work-area-cont  scrollable-block">
+                            <form action="<?php echo $this->url('message/post/mail', ['userId' => $key]); ?>" method="POST">
+                                <div class="summernote-theme-1">
+                                    <textarea name="text" placeholder="Type your message here..." class="form-control summernote"></textarea>
+                                </div>
+                                <div class="chat-area-bottom">
+                                    <button type="submit" class="btn btn-rounded float-left">Send</button>
+                                    <button type="reset" class="btn btn-rounded btn-default float-left clear-message">Clear</button>
+                                </div><!--.chat-area-bottom-->
+                            </form>
+                        </div><!--.mail-box-work-area-cont-->
+                    </div><!--.main-box-work-area-in-->
+                </section><!--.mail-box-work-area-->
+                <?php $i++; ?>
+            <?php } ?>
+            </div>
+        </section><!--.mail-box-->
+        <?php } else { ?>
+            No messages
+        <?php } ?>
+    </div><!--.container-fluid-->
+</div><!--.page-content-->

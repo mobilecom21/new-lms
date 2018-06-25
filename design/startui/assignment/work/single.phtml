@@ -1,0 +1,146 @@
+<?php
+/**
+ * @var Assignment\Model\AssignmentWork $assignmentWork
+ * @var \Zend\Form\Form $feedbackForm
+ * @var \Zend\Form\Element $submitElement
+ */
+
+$this->headLink()
+    ->prependStylesheet('/dist/startui/css/custom.css')
+    ->prependStylesheet('/dist/startui/css/main.css')
+    ->prependStylesheet('/dist/startui/css/lib/bootstrap/bootstrap.min.css')
+    ->prependStylesheet('/dist/startui/css/lib/font-awesome/font-awesome.min.css')
+    ->prependStylesheet('/dist/startui/scripts/dropzone/dropzone.css');
+$this->inlineScript()
+    ->prependFile('/dist/startui/scripts/validator/magic.js')
+    ->prependFile('/dist/startui/scripts/dropzone/dropzone.js')
+    ->prependFile('/dist/startui/scripts/tinymce/js/tinymce/tinymce.min.js')
+    ->prependFile('/dist/startui/js/app.js')
+    ->prependFile('/dist/startui/js/plugins.js')
+    ->prependFile('/dist/startui/js/lib/bootstrap/bootstrap.min.js')
+    ->prependFile('/dist/startui/js/lib/tether/tether.min.js')
+    ->prependFile('/dist/startui/js/lib/jquery/jquery.min.js');
+$this->headTitle('Student Work');
+
+$assignmentWork = $this->assignmentWork;
+
+$feedbackForm = $this->feedbackForm;
+$submitElement = $feedbackForm->get('submit');
+$submitElement->setAttribute('class', 'btn-inline btn-secondary');
+$feedbackForm->setAttribute('action', $this->url('tutor/assignment/post/work/feedback', [
+    'id' => $assignmentWork->getId()
+]));
+$feedbackForm->prepare();
+?>
+
+<div class="page-content <?php if($this->login()['userChainCount'] >0 ) { echo "padding-zero"; } ?>">
+    <div class="container-fluid">
+        <p>
+            <?php if (null !== $assignmentWork->feedbackUploader()) { ?>
+                <a href="<?php echo $this->url('uploader/download', [
+                    'key' => $assignmentWork->feedbackUploader()->getUniqueKey()
+                ]); ?>" class="btn btn-inline btn-secondary">Download Feedback</a>
+            <?php } ?>
+            <a href="<?php echo $this->url('uploader/download', [
+                    'key' => $assignmentWork->assignmentUploader()->getUniqueKey()
+            ]); ?>" class="btn btn-inline btn-secondary">Download Student Work</a>
+            <?php if ($this->lastWork && ($assignmentWork->didNotPass() || $assignmentWork->hasPassed())) { ?>
+                <a href="" data-id="<?php echo $assignmentWork->getId(); ?>" class="btn btn-inline btn-secondary unlock-work">Unlock</a>
+            <?php } ?>
+        </p>
+        <?php
+            if ($assignmentWork->isWaitingToPass()) {
+                echo $this->form()->openTag($feedbackForm);
+                echo '<div class="form-group"><label>Upload feedback</label><div class="dropzone"></div></div>';
+                echo $this->twbsFormRow($feedbackForm->get('feedback'));
+                echo $this->twbsFormRow($feedbackForm->get('failed'));
+                echo $this->twbsFormRow($submitElement);
+                echo $this->form()->closeTag();
+            }
+        ?>
+        <?php if (count($this->courses) > 0) { ?>
+            <table class="table">
+                <thead>
+                <tr>
+                    <th>Course Name</th>
+                    <th>Modules</th>
+                </tr>
+                </thead>
+                <tbody>
+                <?php foreach ($this->courses ?? [] as $course) { ?>
+                    <tr>
+                        <td><?php echo $course['name']; ?></td>
+                        <td>
+                            <?php foreach ($course['modules'] ?? [] as $module) { ?>
+                                <button type="button" class="btn btn-rounded btn-inline btn-sm <?php echo $module['status']; ?>"><?php echo $module['name']; ?></button>
+                                <span></span>
+                            <?php } ?>
+                        </td>
+                    </tr>
+                <?php } ?>
+                </tbody>
+            </table>
+        <?php } ?>
+    </div>
+</div>
+
+<?php
+$this->inlineScript()->captureStart();
+echo <<<JS
+    (function ( $ ) {
+        if ($('.dropzone').length) {
+            var feedback = $('input[name="feedback"]');
+            Dropzone.autoDiscover = false;
+            var myDropzoneOptions = {
+                url: '/uploader/upload',
+                maxFiles: 1,
+                maxFilesize: 3,
+                addRemoveLinks: true
+            };
+            var myDropzone = new Dropzone('.dropzone', myDropzoneOptions);
+            myDropzone.on('success', function (file, response) {
+                file.uploadId = response.id;
+                $(feedback).val(response.id);
+            });
+            myDropzone.on('addedfile', function (file) {
+                switch (file.type) {
+                    case 'application/pdf':
+                        myDropzone.emit("thumbnail", file, '/dist/startui/images/pdf-icon.png');
+                        break;
+                    case 'application/vnd.openxmlformats-officedocument.wordprocessingml.document':
+                        myDropzone.emit("thumbnail", file, '/dist/startui/images/doc-icon.png');
+                        break;
+                    case 'application/msword':
+                        myDropzone.emit("thumbnail", file, '/dist/startui/images/doc-icon.png');
+                        break;
+                    case 'application/vnd.ms-excel':
+                        myDropzone.emit("thumbnail", file, '/dist/startui/images/excel-icon.png');
+                        break;
+                    case 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet':
+                        myDropzone.emit("thumbnail", file, '/dist/startui/images/excel-icon.png');
+                        break;
+                    case 'application/octet-stream':
+                        myDropzone.emit('thumbnail', file, '/dist/startui/images/zip-icon.png');
+                        break;
+                    case 'application/zip':
+                        myDropzone.emit('thumbnail', file, '/dist/startui/images/zip-icon.png');
+                        break;
+                }
+            });
+            myDropzone.on('removedfile', function (file) {
+                var assignId = $(feedback).val();
+                if(file.uploadId && assignId == file.uploadId) {
+                    $(feedback).val('');
+                }
+            });
+        }
+        $(document).on('click', '.unlock-work', function() {
+            if (confirm('Are you sure you want to Unlock?')) {
+                $.get('/assignment/unlock/' + $(this).attr('data-id'), function( data ) {
+                    location.reload();
+                });
+            }
+        });
+    })(jQuery);
+JS;
+$this->inlineScript()->captureEnd();

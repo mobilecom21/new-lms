@@ -1,0 +1,341 @@
+<?php
+/**
+ * @var Exam\Model\Exam $exam
+ */
+$this->headLink()
+    ->prependStylesheet('/dist/startui/css/custom.css')
+    ->prependStylesheet('/dist/startui/css/main.css')
+    ->prependStylesheet('/dist/startui/css/lib/bootstrap/bootstrap.min.css')
+    ->prependStylesheet('/dist/startui/css/lib/font-awesome/font-awesome.min.css')
+    ->prependStylesheet('/dist/startui/css/separate/vendor/datatables-net.min.css')
+    ->prependStylesheet('/dist/startui/css/lib/datatables-net/datatables.min.css')
+    ->prependStylesheet('/dist/startui/css/lib/bootstrap-sweetalert/sweetalert.css')
+    ->prependStylesheet('/dist/startui/css/separate/vendor/sweet-alert-animations.min.css');
+$this->inlineScript()
+    ->prependFile('/dist/startui/scripts/tinymce/js/tinymce/tinymce.min.js')
+    ->prependFile('/dist/startui/js/app.js')
+    ->prependFile('/dist/startui/js/lib/datatables-net/datatables.min.js')
+    //->prependFile('/dist/startui/scripts/validator/magic.js')
+    ->prependFile('/dist/startui/js/lib/html5-form-validation/jquery.validation.min.js')
+    ->prependFile('/dist/startui/js/plugins.js')
+    ->prependFile('/dist/startui/js/lib/bootstrap/bootstrap.min.js')
+    ->prependFile('/dist/startui/js/lib/tether/tether.min.js')
+    ->prependFile('/dist/startui/js/lib/bootstrap-sweetalert/sweetalert.min.js')
+    //->prependFile('/dist/startui/js/lib/popper/popper.min.js')
+    //->prependFile('/dist/startui/js/lib/jquery/jquery-3.2.1.min.js');
+    ->prependFile('/dist/startui/js/lib/jquery/jquery.min.js');
+
+$this->headTitle('Exam');
+?>
+
+    <div class="page-content <?php if($this->login()['userChainCount'] >0 ) { echo "padding-zero"; } ?>">
+    <div class="container-fluid">
+    <div class="box-typical box-typical-padding">
+<?php
+//if mysql's datetime timezone not same with server's datetime
+//$ipInfo = file_get_contents('http://ip-api.com/json');
+//$ipInfo = json_decode($ipInfo, true);
+//$timezone = $ipInfo["timezone"];
+//if($timezone) {
+//	date_default_timezone_set($timezone);
+//}
+
+//default value
+$wait_minute = 0;
+$max_limit_attempt = 3;
+$lastAttempt = $this->latestAttemptDateTime ?? null;
+//echo $lastAttempt;
+$now = date('Y-m-d H:i:s');
+$showprintcertificatealert = false;
+$coupon = $this->coupon;
+
+$exam = $this->exam;
+$examId = $this->parentId;
+
+/**
+ * Content
+ */
+$invokables = $this->sharedContentSingle();
+$contents = [];
+foreach ($this->single as $content) {
+    $invokable = $invokables[$content->getName()] ?? null;
+    if (is_callable($invokable)) {
+        $contents[] = $invokable($exam->getId());
+    }
+}
+?>
+    <h1>Welcome to your exam : <?php echo $content->getName(); ?></h1>
+
+<?php if ((\Rbac\Role\Student::class === $this->identity()->getRole() && !$this->isPassed) or !$this->isPassed) { ?>
+
+    <div class="alert alert-info" role="alert">Welcome to your exam area and good luck in completing your multiple choice exam.
+        <?php if (\Rbac\Role\Student::class === $this->identity()->getRole() && $wait_minute > 0) { ?>
+            If you do not achieve the required score, the exam can be re-sat after <?php echo $wait_minute;?> minutes.
+        <?php } ?>
+
+        <?php if (\Rbac\Role\Student::class === $this->identity()->getRole() && !$isCourseNoLimit && !$this->isPassed) { ?>
+            <br/><br/>
+            You have a maximum <?php echo $max_limit_attempt;?> tries to complete the exam. If you do fail to complete you will be presented with an option to retry the exam a further 9 times for a small fee of &#163;5.
+        <?php } ?>
+
+    </div>
+
+<?php } ?>
+
+<?php
+// if student's attempt has over limit.
+if (\Rbac\Role\Student::class === $this->identity()->getRole() && $this->numberattempt >= $max_limit_attempt && !$isCourseNoLimit && !$this->isPassed) {
+    ?>
+    <section class="card card-red mb-3">
+        <header class="card-header">
+            You have no further attempt left
+        </header>
+        <div class="card-block">
+            <p class="card-text">
+                You have exceeded the number of attempts to complete your exam. For &#163;5 you can have unlimited attempts at your exam.
+            </p>
+            <a href="<?php echo $this->url('student/payment/form/payment',array('id' => $this->courseId));?>" class="btn btn-primary">Click here, to buy unlimited attempts for &#163;5</a>
+        </div>
+    </section>
+    <?php
+    echo '<p><a class="btn btn-secondary" href="'.$this->url('student/course/view/single',array('id' => $this->courseId)).'">Back to Course</a></p>';
+} else {
+    $now_microtime = strtotime($now);
+    $last_microtime = strtotime($lastAttempt);
+    $next_microtime = $last_microtime + $wait_minute*60;
+    $next = date('Y-m-d H:i:s',$next_microtime);
+    $showprintcertificatealert = false;
+
+    //echo $now.$lastAttempt;
+
+    $diff_minute = 0;
+    if($lastAttempt) {
+        $diff_minute = ($now_microtime - $last_microtime) / 60;
+    }
+    //echo $diff_minute;
+
+    $exam_countdown = '';
+
+    if (\Rbac\Role\Student::class === $this->identity()->getRole()) {
+        if ($diff_minute > 0 && $diff_minute < $wait_minute && !$this->isPassed) {
+            $exam_countdown = '<div class="alert alert-warning">You can do exam after <div id="timer" style="display:inline;"></div></div>';
+        }
+    }
+    echo $exam_countdown; ?>
+
+    <?php
+
+    if (\Rbac\Role\Student::class === $this->identity()->getRole()) {
+
+        if (!$this->isPassed) {
+            if (!$isCourseNoLimit) {
+                if ($this->numberattempt > 0 && $this->numberattempt < $max_limit_attempt) {
+                    echo '<div class="alert alert-warning" role="alert">Currently you have done '.$this->numberattempt.' attempt exam.</div>';
+                }
+            }
+        } else {
+
+            echo '<div class="alert alert-warning" role="alert">You have passed the exam. Your certificate can be download <a href="'.$this->certificate.'">here</a>.</div>';
+
+            $show_offer = $this->usermetaTable->getMetaByName($this->identity()->getId(), 'show_offer')->current()->getValue();
+
+            if(!$this->isCertificatePaymentExist && $show_offer != 'no') {
+
+                $showprintcertificatealert = true;
+
+                echo '<div class="alert alert-warning" role="alert">If you wish to purchase a hard copy of the certificate (recommended). Please <a href="'.$this->url('certificate/form/payment',array('id' => $examId, 'coupon' => null)).'">click here</a>.</div>';
+
+            }
+
+        }
+    }
+    ?>
+
+    <?php
+    /**
+     * @var \Zend\Form\Form $form
+     */
+    $form = $this->form;
+
+    /**
+     * @var \Zend\Form\Element $submitElement
+     */
+    $submitElement = $form->get('submit_answers');
+    $submitElement->setAttribute('class', 'btn btn-primary');
+
+    if (\Rbac\Role\Student::class === $this->identity()->getRole()) {
+        if($diff_minute > 0 && $diff_minute < $wait_minute && !$this->isPassed ) {
+            $submitElement->setAttribute('disabled', 'disabled');
+        }
+
+        if ($this->isPassed) {
+            $submitElement->setAttribute('disabled', 'disabled');
+        }
+
+        if (!$isCourseNoLimit) {
+            if ($this->numberattempt >= $max_limit_attempt) {
+                $submitElement->setAttribute('disabled', 'disabled');
+            }
+        }
+    } else {
+        $submitElement->setAttribute('disabled', 'disabled');
+    }
+
+    $form->setAttribute('action', $this->url('attempt/post/attempt'));
+
+    echo $this->form()->openTag($form);
+
+    echo $this->formRow($form->get('studentId'));
+    echo $this->formRow($form->get('parentId'));
+
+    $question_amount = 0;
+    foreach($this->questions as $number => $row) {
+
+        if ($number > 0) {
+            echo '<section class="box-typical box-typical-dashboard panel panel-default">'.PHP_EOL.
+                '<header class="box-typical-header panel-heading">Question '.$row[0].'</header>'.PHP_EOL.
+                '<div class="panel-body p-4">'.PHP_EOL;
+
+            echo '<div class="form-group form-group-radios">'.PHP_EOL.'<label class="form-label" id="question-'.$number.'">'.strip_tags($row[1],'<br />').'</label>'.PHP_EOL;
+
+            echo '<div class="radio"><input id="question-'.$number.'-A" type="radio" name="answer['.$number.']" value="A" data-validation="[NOTEMPTY]" data-validation-group="question-'.$number.'" data-validation-message="You must choose answer !"><label for="question-'.$number.'-A">&nbsp;A. '.$row[2].'</label></div>'.PHP_EOL;
+            echo '<div class="radio"><input id="question-'.$number.'-B" type="radio" name="answer['.$number.']" value="B"><label for="question-'.$number.'-B">&nbsp;B. '.$row[3].'</label></div>'.PHP_EOL;
+            echo '<div class="radio"><input id="question-'.$number.'-C" type="radio" name="answer['.$number.']" value="C"><label for="question-'.$number.'-C">&nbsp;C. '.$row[4].'</label></div>'.PHP_EOL;
+            echo '<div class="radio"><input id="question-'.$number.'-D" type="radio" name="answer['.$number.']" value="D"><label for="question-'.$number.'-D">&nbsp;D. '.$row[5].'</label></div>'.PHP_EOL;
+            echo '</div>';
+
+            echo '</div></section>'.PHP_EOL;
+            $question_amount++;
+        }
+    }
+    echo '<input type="hidden" name="question_number" value="'.$question_amount.'"/>';
+
+    echo $this->twbsFormRow($submitElement);
+
+    echo $this->form()->closeTag();
+    ?>
+
+    <?php
+    if (\Rbac\Role\Student::class === $this->identity()->getRole()) {
+        if (!$this->isPassed && $this->previd != false) {
+            ?>
+            <a name="failed"></a>
+            <section class="card card-red mb-3">
+                <header class="card-header">
+                    Unfortunately, you did not pass !
+                </header>
+                <div class="card-block">
+                    <p class="card-text">
+                        <?php if (!$isCourseNoLimit) { ?>
+                            Please read over the content before re-attempting exam. You have <?php echo ($max_limit_attempt - $this->numberattempt);?> more attempts.
+                        <?php } ?>
+                        Pass mark 75% required. You achieved <?php echo $this->score; ?>%.
+                    </p>
+                    <a href="#" class="btn btn-primary">Click here to try again</a>
+                </div>
+            </section>
+
+        <?php }
+    }
+    ?>
+
+    <?php
+
+    if (\Rbac\Role\Administrator::class === $this->identity()->getRole()) {
+        echo '<p><a class="btn btn-secondary" href="'.$this->url('course/view/single',array('id' => $this->courseId)).'">Back to Course</a></p>';
+    }
+
+    if (\Rbac\Role\Student::class === $this->identity()->getRole()) {
+        echo '<p><a class="btn btn-secondary" href="'.$this->url('student/course/view/single',array('id' => $this->courseId)).'">Back to Course</a></p>';
+    }
+
+    if (\Rbac\Role\Tutor::class === $this->identity()->getRole()) {
+        echo '<p><a class="btn btn-secondary" href="'.$this->url('tutor/course/view/single',array('id' => $this->courseId)).'">Back to Course</a></p>';
+    }
+
+    ?>
+    <div class="console"></div>
+    </div>
+    </div>
+    </div>
+    <?php
+    $this->inlineScript()->captureStart();
+    echo <<<JS
+$(function() {
+	$('#attempt').validate({
+		submit: {
+			settings: {
+				inputContainer: '.form-group',
+				errorListClass: 'form-tooltip-error'
+			},
+			callback: {
+				onSubmit: function(node, formData) {
+					
+					console.log('#' + node[0].action + ' has a submit override.');
+					console.log(formData);
+ 
+					//node[0].submit();
+
+					$.ajax({
+						type: 'POST',
+						data: formData,
+						url: node[0].action,
+						dataType: 'json',
+						success: function ( response, textStatus, jqxhr ) {	 
+							if (!response.status) {	 	 
+								//console.log(response.redirectTo);
+								window.location = response.redirectTo;
+								return false;	 
+							} 	 
+						}
+					});
+
+				}
+			}
+		}
+	});
+});
+JS;
+    $this->inlineScript()->captureEnd();
+    ?>
+    <?php
+    if (\Rbac\Role\Student::class === $this->identity()->getRole() && $diff_minute > 0 && $diff_minute < $wait_minute && !$this->isPassed) {
+        $this->inlineScript()->captureStart();
+        echo <<<JS
+
+var server_end = new Date('$next').getTime();
+var server_now = new Date('$now').getTime();
+var client_now = new Date().getTime();
+var end = server_end - server_now + client_now; 
+
+// Update the count down every 1 second
+var x = setInterval(function() {
+
+    // Get todays date and time
+    var now = new Date().getTime();
+    
+    // Find the distance between now an the count down date
+    var distance = end - now;
+    
+    // Time calculations for days, hours, minutes and seconds
+    var minutes = Math.floor((distance % (1000 * 60 * 60)) / (1000 * 60));
+    var seconds = Math.floor((distance % (1000 * 60)) / 1000);
+    
+    // Output the result in an element with id="demo"
+    document.getElementById("timer").innerHTML = minutes + " minutes " + seconds + " seconds ";
+    
+    // If the count down is over, write some text 
+    if (distance < 0) {
+        clearInterval(x);
+        location.reload();
+    }
+}, 1000);
+
+JS;
+        $this->inlineScript()->captureEnd();
+    }
+
+    ?>
+    <?php
+} //End if Student Over Limit Attempt
+?>

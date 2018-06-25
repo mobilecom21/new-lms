@@ -1,0 +1,112 @@
+<?php
+/**
+ * @var Payment\Model\Payment $payment
+ */
+$this->headLink()
+    ->prependStylesheet('/dist/startui/css/custom.css')
+    ->prependStylesheet('/dist/startui/css/main.css')
+    ->prependStylesheet('/dist/startui/css/lib/bootstrap/bootstrap.min.css')
+    ->prependStylesheet('/dist/startui/css/lib/font-awesome/font-awesome.min.css')
+    ->prependStylesheet('/dist/startui/css/separate/vendor/datatables-net.min.css')
+    ->prependStylesheet('/dist/startui/css/lib/datatables-net/datatables.min.css');
+$this->inlineScript()
+    ->prependFile('/dist/startui/scripts/validator/magic.js')
+    ->prependFile('/dist/startui/scripts/tinymce/js/tinymce/tinymce.min.js')
+    ->prependFile('/dist/startui/js/app.js')
+    ->prependFile('/dist/startui/js/lib/datatables-net/datatables.min.js')
+    ->prependFile('/dist/startui/js/plugins.js')
+    ->prependFile('/dist/startui/js/lib/bootstrap/bootstrap.min.js')
+    ->prependFile('/dist/startui/js/lib/tether/tether.min.js')
+    ->prependFile('/dist/startui/js/lib/jquery/jquery.min.js');
+$this->headTitle('Payment');
+?>
+
+<?php
+$this->inlineScript()->captureStart();
+echo <<<JS
+    (function ($) {
+        var t = $('#payment-table').DataTable({
+			"order": [],
+			"columnDefs": [{
+				"targets": 'no-sort',
+				"orderable": false,
+			}]
+		});
+		t.on( 'order.dt search.dt', function () {
+			t.column(0, {search:'applied', order:'applied'}).nodes().each( function (cell, i) {
+				cell.innerHTML = i+1;
+			} );
+		} ).draw();
+    })(jQuery);
+JS;
+$this->inlineScript()->captureEnd();
+?>
+<?php
+	$result = $this->resultSet;
+	//var_dump($result);
+	//echo count($this->resultSet);
+?>
+<div class="page-content <?php if($this->login()['userChainCount'] >0 ) { echo "padding-zero"; } ?>">
+    <div class="container-fluid">
+        <?php if (count($this->resultSet) > 0) { ?>
+            <table id="payment-table" class="display table table-striped table-bordered" cellspacing="0" width="100%">
+                <thead>
+                <tr>
+					<th class="no-sort"></th>
+                    <th class="text-center">Student Name</th>
+                    <th class="text-center">Course Name</th>
+					<th class="text-center">Date Transaction</th>
+                    <th class="text-center">Amount</th>
+					
+                </tr>
+                </thead>
+                <tbody>
+                <?php 	
+				if (\Rbac\Role\Student::class === $this->identity()->getRole()) {
+					$newresult = array();
+					foreach($result as $key => $payment)
+					{
+						if ($payment['student_id'] == $this->identity()->getId()) {
+							$newresult[$key] = $payment;
+						}
+					}
+					$result = array();
+					$result = $newresult;
+				}
+					foreach($result as $key => $payment)
+					{
+						$user = $this->user->oneById($payment['student_id']);
+						$course = $this->course->fetchById($payment['course_id']);
+				?>	<tr>	
+						<td class="text-center"></td>
+                        <td><?php echo $user->getFirstName()." ".$user->getLastName(); ?></td>
+                        <td><?php echo $course->getName();?></td>
+                        <td class="text-center"><?php echo $payment['createdAt'];?></td>
+                        <td class="text-center">&#163;5</td>						
+                    </tr>
+				<?php
+					}
+				?>
+                </tbody>
+            </table>
+        <?php } else { ?>
+            
+            <table id="information-table" class="display table table-striped table-bordered" cellspacing="0" width="100%">
+                <thead>
+                <tr>
+                    <th>Information</th>
+                                </tr>
+                </thead>
+                <tbody>                            
+                <tr>
+                    <td>
+                        If you have purchased additional exams, your payment history will appear here.
+                    </td>
+                </tr>
+                </tbody>
+        </table>
+
+            
+        <?php } ?>
+    </div>
+</div>

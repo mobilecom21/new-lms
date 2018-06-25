@@ -1,0 +1,50 @@
+<?php
+/**
+ * @var Topic\Model\Topic $topic
+ * @var Topic\Model\Attachment $attachment
+ */
+$topic = $this->topic;
+
+/**
+ * Attachment Single
+ */
+$invokables = $this->sharedAttachmentSingle();
+$attachments = [];
+foreach ($this->attachments as $attachment) {
+    $invokable = $invokables[$attachment->getAttachment()] ?? null;
+    if (is_callable($invokable)) {
+        $attachments[] = $invokable($topic->getId(), $attachment->getAttachmentId(), $this->routeNamespace);
+    }
+}
+
+$attachmentLinks = [];
+foreach ($attachments as $single) {
+    $type = $single['type'] ?? '';
+    $target = '';
+    $attachmentLink = '<div class="topic-row"><div class="col-xs-6">';
+    if ('assignment' == $type) {
+        $attachmentLink .= '<i class="topic-icon fa fa-check-square" aria-hidden="true"></i>';
+    } elseif ('scorm' == $type) {
+        $attachmentLink .= '<i class="topic-icon fa fa-th" aria-hidden="true"></i>';
+    } elseif ('file' == $type) {
+        $target = 'target="_blank"';
+        $attachmentLink .= '<i class="topic-icon fa fa-file" aria-hidden="true"></i>';
+    } elseif ('exam' == $type) {
+        $attachmentLink .= '<i class="topic-icon fa fa-tasks" aria-hidden="true"></i>';
+    }
+    $attachmentLink .= '<a ' . $target . ' href="' . $single['href'] . '" style="color:red">' . $single['name'] . '</a></div></div>';
+    $attachmentLinks[] = $attachmentLink;
+}
+
+?>
+
+<div>
+    <h1><?php echo $topic->getName(); ?></h1>
+    <p><?php echo $topic->getSummary(); ?></p>
+
+    <?php
+    foreach ($attachmentLinks as $attachmentLink) {
+        echo $attachmentLink;
+    }
+    ?>
+</div>

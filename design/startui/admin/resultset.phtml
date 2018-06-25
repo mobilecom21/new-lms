@@ -1,0 +1,68 @@
+<?php
+/**
+ * @var User\Model\User $user
+ */
+$this->headTitle('Admins');
+$this->headLink()
+    ->prependStylesheet('/dist/startui/css/custom.css')
+    ->prependStylesheet('/dist/startui/css/main.css')
+    ->prependStylesheet('/dist/startui/css/lib/bootstrap/bootstrap.min.css')
+    ->prependStylesheet('/dist/startui/css/lib/font-awesome/font-awesome.min.css')
+    ->prependStylesheet('/dist/startui/scripts/dropzone/dropzone.css')
+    ->prependStylesheet('/dist/startui/css/separate/vendor/datatables-net.min.css')
+    ->prependStylesheet('/dist/startui/css/lib/datatables-net/datatables.min.css');
+$this->inlineScript()
+    ->prependFile('/dist/startui/scripts/validator/magic.js')
+    ->prependFile('/dist/startui/js/app.js')
+    ->prependFile('/dist/startui/js/lib/datatables-net/datatables.min.js')
+    ->prependFile('/dist/startui/js/plugins.js')
+    ->prependFile('/dist/startui/js/lib/bootstrap/bootstrap.min.js')
+    ->prependFile('/dist/startui/js/lib/tether/tether.min.js')
+    ->prependFile('/dist/startui/js/lib/jquery/jquery.min.js');
+?>
+
+<?php
+$this->inlineScript()->captureStart();
+echo <<<JS
+    (function ($) {
+        $('#user-table').DataTable({'aaSorting': []});
+    })(jQuery);
+JS;
+$this->inlineScript()->captureEnd();
+?>
+
+<div class="page-content <?php if($this->login()['userChainCount'] >0 ) { echo "padding-zero"; } ?>">
+    <div class="container-fluid">
+        <a href="<?php echo $this->url('admin/form/admin'); ?>" class="btn btn-inline btn-secondary">Add Admin</a><br><br>
+        <form action="<?php echo $this->url('admin/user/view/resultset'); ?>" method="get">
+        <?php if (count($this->resultSet) > 0) { ?>
+            <table id="user-table" class="display table table-striped table-bordered" cellspacing="0" width="100%">
+            <thead>
+            <tr>
+                <th>First Name</th>
+                <th>Last Name</th>
+                <th>Username</th>
+                <th>Email</th>
+                <th>Phone</th>
+                <th>Action</th>
+            </tr>
+            </thead>
+            <tbody>
+                <?php foreach ($this->resultSet ?? [] as $user) : ?>
+                    <tr>
+                        <td><?php echo $user->getFirstName(); ?></td>
+                        <td><?php echo $user->getLastName(); ?></td>
+                        <td><?php echo $user->getUsername(); ?></td>
+                        <td><?php echo $user->getIdentity(); ?></td>
+                        <td><?php echo $user->getPhone(); ?></td>
+                        <td>
+                            <a class="btn btn-inline btn-secondary" href="<?php echo $this->url('admin/form/admin', ['id' => $user->getId()]); ?>">Edit</a>
+                        </td>
+                    </tr>
+                <?php endforeach; ?>
+            </tbody>
+        </table>
+        <?php } ?>
+        </form>
+    </div>
+</div>

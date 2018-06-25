@@ -1,0 +1,81 @@
+<?php
+/**
+ * @var User\Model\User $user
+ */
+$this->headLink()
+    ->prependStylesheet('/dist/startui/css/custom.css')
+    ->prependStylesheet('/dist/startui/css/main.css')
+    ->prependStylesheet('/dist/startui/css/lib/bootstrap/bootstrap.min.css')
+    ->prependStylesheet('/dist/startui/css/lib/font-awesome/font-awesome.min.css')
+    ->prependStylesheet('/dist/startui/css/separate/vendor/datatables-net.min.css')
+    ->prependStylesheet('/dist/startui/css/lib/datatables-net/datatables.min.css');
+$this->inlineScript()
+    ->prependFile('/dist/startui/scripts/validator/magic.js')
+    ->prependFile('/dist/startui/scripts/tinymce/js/tinymce/tinymce.min.js')
+    ->prependFile('/dist/startui/js/app.js')
+    ->prependFile('/dist/startui/js/lib/datatables-net/datatables.min.js')
+    ->prependFile('/dist/startui/js/plugins.js')
+    ->prependFile('/dist/startui/js/lib/bootstrap/bootstrap.min.js')
+    ->prependFile('/dist/startui/js/lib/tether/tether.min.js')
+    ->prependFile('/dist/startui/js/lib/jquery/jquery.min.js');
+$this->headTitle('Students');
+?>
+
+<?php
+$this->inlineScript()->captureStart();
+echo <<<JS
+    (function ($) {
+        $('#logs-table').DataTable({'aaSorting': []});
+    })(jQuery);
+JS;
+$this->inlineScript()->captureEnd();
+?>
+<div class="page-content <?php if($this->login()['userChainCount'] >0 ) { echo "padding-zero"; } ?>">
+    <div class="container-fluid">
+        <header class="section-header">
+            <div class="tbl">
+                <div class="tbl-row">
+                    <div class="tbl-cell">
+                        <?php
+                            $first_name = $last_name = '';
+                            if (count($this->usermeta) > 0) {
+                                foreach($this->usermeta as $userMeta) {
+                                    if ('first_name' == $userMeta['name']) {
+                                        $first_name = $userMeta['value'];
+                                    } elseif ('last_name' == $userMeta['name']) {
+                                        $last_name = $userMeta['value'];
+                                    }
+                                }
+                            }
+                        ?>
+                        <h2><?php echo $first_name . ' ' . $last_name; ?> login activity</h2>
+                    </div>
+                </div>
+            </div>
+        </header>
+        <section class="card">
+            <div class="card-block">
+                <?php if (count($this->resultSet) > 0) { ?>
+                    <table id="logs-table" class="display table table-striped table-bordered" cellspacing="0" width="100%">
+                        <thead>
+                        <tr>
+                            <th>IP</th>
+                            <th>Date</th>
+                        </tr>
+                        </thead>
+                        <tbody>
+                        <?php foreach ($this->resultSet ?? [] as $log) : ?>
+                            <tr>
+                                <td><?php echo $log['ip']; ?></td>
+                                <td><?php echo $log['created_at']->format('F j, Y, g:i a'); ?></td>
+                            </tr>
+                        <?php endforeach; ?>
+                        </tbody>
+                    </table>
+                <?php } else { ?>
+                    No activity yet.
+                <?php } ?>
+            </div>
+        </section>
+    </div>
+</div>

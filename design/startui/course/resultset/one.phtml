@@ -1,0 +1,15 @@
+<?php
+/**
+ * @var Course\Model\Course $course
+ */
+$course = $this->course;
+?>
+
+<tr>
+    <td>
+        <a href="<?php echo $this->url($this->singleRouteName, ['id' => $course->getId()]); ?>"><?php echo $course->getName(); ?></a>
+    </td>
+    <?php if (\Rbac\Role\Administrator::class === $this->identity()->getRole()) { ?>
+        <td class="table-check"><button class="btn btn-inline btn-danger btn-sm <?= $this->archived == 0 ? 'archive-course' : 'restore-course'; ?>" data-id="<?php echo $course->getId(); ?>"><?= $this->archived == 0 ? 'Archive' : 'Restore'; ?></button></td>
+    <?php } ?>
+</tr>

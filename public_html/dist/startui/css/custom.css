@@ -1,0 +1,125 @@
+.topic-row {
+    margin-top: 5px;
+    margin-bottom: 5px;
+}
+.topic-icon {
+    font-size: 20px;
+    width: 25px;
+    text-align: center;
+    vertical-align: middle;
+    margin-right: 5px;
+}
+.activity-dropdown {
+    text-align: right;
+    margin-left: 10px;
+}
+.activity-dropdown .dropdown-toggle {
+    cursor: pointer;
+}
+#quiz [hidden] {
+    display: block !important;
+}
+img {
+    max-width: 100%;
+}
+.open > .dropdown-menu {
+    display: block;
+}
+#student label {
+    display: inline-block;
+    margin-right: 20px;
+}
+#student fieldset {
+    margin-bottom: 10px;
+    margin-top: 10px;
+}
+#student fieldset label button {
+    margin-left: 10px;
+    margin-right: 10px;
+}
+#student fieldset > button {
+    width: 25px;
+    margin-right: 5px;
+}
+.success-msg {
+    color: green;
+}
+.note-group-select-from-files {
+    display: none;
+}
+.message-trash {
+    height: 32px;
+    padding: 0;
+    background: 0 0;
+    border: none;
+    color: #919fa9;
+    margin: 0 0 0 20px;
+}
+.mail-box-letter-opened, .mail-box-letter-item {
+    cursor: pointer;
+}
+.show-on-click {
+    display: none;
+}
+.show-on-click-btn {
+    margin-top: 15px;
+    cursor: pointer;
+}
+.site-header .site-logo img {
+    height: 35px;
+    top: 2px;
+    width: inherit;
+}
+.unviewed {
+    background-color: #ecf2f5;
+}
+.mail-box-letter-item .mail-box-letter-item-header .tbl-cell-name {
+    font-weight: 500;
+}
+.unviewed .mail-box-letter-item-header .tbl-cell-name, .unviewed .mail-box-letter-item-txt {
+    font-weight: 600;
+}
+.notification-area .box-typical-body {
+    min-height: 290px;
+}
+.notification-area .tbl-typical tr:nth-child(odd) {
+    padding: 15px 20px 15px 15px;
+    color: #6c7a86;
+    line-height: 1.2;
+}
+.welcome-heading {
+    background: #fbfcfd;
+}
+.site-header .site-header-content {
+    width: inherit !important;
+}
+.site-header .burger-right {
+    display: none !important;
+}
+.activity-dropdown ul {
+    margin: 6px 0 0 0;
+}
+.activity-dropdown ul li {
+    padding: 0;
+}
+.activity-dropdown ul li:before {
+    background: #fff;
+    width: 0;
+    height: 0;
+}
+.activity-dropdown ul li a {
+    color: #292b2c;
+    text-decoration: none;
+    border-bottom: none;
+}
+textarea[name="meta[address]"] {
+    height: 80px;
+}
+
+.padding-zero {
+    padding-top: 0;
+}
+
+.breadcrumb-text {
+    color: #00a8ff;
+}

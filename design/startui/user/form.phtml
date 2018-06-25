@@ -1,0 +1,288 @@
+<?php
+$this->headTitle('User');
+$this->headLink()
+    ->prependStylesheet('/dist/startui/css/custom.css')
+    ->prependStylesheet('/dist/startui/css/main.css')
+    ->prependStylesheet('/dist/startui/css/lib/bootstrap/bootstrap.min.css')
+    ->prependStylesheet('/dist/startui/scripts/bootstrap-select/bootstrap-select.min.css')
+    ->prependStylesheet('/dist/startui/css/lib/font-awesome/font-awesome.min.css');
+$this->inlineScript()
+    ->prependFile('/dist/startui/scripts/validator/magic.js')
+    ->prependFile('/dist/startui/scripts/bootstrap-select/bootstrap-select.min.js')
+    ->prependFile('/dist/startui/scripts/tinymce/js/tinymce/tinymce.min.js')
+    ->prependFile('/dist/startui/js/app.js')
+    ->prependFile('/dist/startui/js/plugins.js')
+    ->prependFile('/dist/startui/js/lib/bootstrap/bootstrap.min.js')
+    ->prependFile('/dist/startui/js/lib/tether/tether.min.js')
+    ->prependFile('/dist/startui/js/lib/jquery/jquery.min.js');
+?>
+<div class="page-content <?php if($this->login()['userChainCount'] >0 ) { echo "padding-zero"; } ?>">
+    <div class="container-fluid">
+        <?php
+        /**
+         * @var \Zend\Form\Form $form
+         */
+        $form = $this->form;
+
+        /**
+         * @var \Zend\Form\Element $submitElement
+         */
+        $submitElement = $form->get('submit');
+        $submitElement->setAttribute('class', 'btn-inline btn-secondary');
+
+        $form->prepare();
+
+        $form->get('password')->setValue('');
+        $form->get('pin')->setValue('');
+
+        echo $this->form()->openTag($form);
+        echo $this->formRow($form->get('id'));
+        echo $this->formRow($form->get('role'));
+
+        if ($form->has('meta')) {
+            $metaRows = $form->get('meta');
+            foreach ($metaRows as $metaRow) {
+                $name = $metaRow->getName();
+                $name = str_replace(array('meta[', ']'), '', $name);
+                $metaFormRows[$name] = $metaRow;
+            }
+        }
+
+        echo isset($metaFormRows['first_name']) ? $this->twbsFormRow($metaFormRows['first_name']) : '';
+        echo isset($metaFormRows['last_name']) ? $this->twbsFormRow($metaFormRows['last_name']) : '';
+        echo $this->twbsFormRow($form->get('username'));
+        if (! $form->get('id')->getValue()) {
+            echo $this->twbsFormRow($form->get('assign-username'));
+        }
+        echo $this->twbsFormRow($form->get('identity'));
+        echo $this->twbsFormRow($form->get('password'));
+        if (! $form->get('id')->getValue()) {
+            echo $this->twbsFormRow($form->get('assign-password'));
+        }
+        echo $this->twbsFormRow($form->get('pin'));
+        echo $this->twbsFormRow($form->get('plainpin'));
+        if (! $form->get('id')->getValue()) {
+            echo $this->twbsFormRow($form->get('assign-pin'));
+        }
+
+        echo isset($metaFormRows['phone']) ? $this->twbsFormRow($metaFormRows['phone']) : '';
+        echo isset($metaFormRows['address']) ? $this->twbsFormRow($metaFormRows['address']) : '';
+        echo isset($metaFormRows['sort_code']) ? $this->twbsFormRow($metaFormRows['sort_code']) : '';
+        echo isset($metaFormRows['account_number']) ? $this->twbsFormRow($metaFormRows['account_number']) : '';
+        echo isset($metaFormRows['payment_method']) ? $this->twbsFormRow($metaFormRows['payment_method']) : '';
+
+        if ($form->has('courses')) {
+            echo '<br>' . $this->twbsFormRow($form->get('courses')) . '<br>';
+        }
+
+        if ($form->has('courseTutor')) {
+            echo '<br>' . $this->formCollection($form->get('courseTutor')) . '<br>';
+        }
+
+        if (isset($metaFormRows['show_offer'])) {
+            echo '<div class="checkbox-toggle mt-2 mb-3">';
+            $this->twbsFormRow()->setLabelPosition('append');
+            echo $this->twbsFormRow($metaFormRows['show_offer']);
+            echo '</div>';
+            $this->twbsFormRow()->setLabelPosition('prepend');
+        }
+
+        echo isset($metaFormRows['marking_days']) ? $this->twbsFormRow($metaFormRows['marking_days']) : '';
+
+        echo isset($metaFormRows['suspended']) ? $this->twbsFormRow($metaFormRows['suspended']) : '';
+        if (! $form->get('id')->getValue()) {
+            echo $this->twbsFormRow($form->get('notify-user'));
+        }
+        echo $this->twbsFormRow($submitElement);
+        echo $this->form()->closeTag();
+        ?>
+    </div>
+</div>
+<?php
+$this->inlineScript()->captureStart();
+echo <<<JS
+    function formFieldsetRemoveIt(el) {
+        var count = document.querySelectorAll('form > fieldset > fieldset').length;
+        if (count > 1) {
+          el.parentNode.remove();   
+        }
+    }
+    
+    function formFieldsetDuplicateIt(el) {
+        var count = document.querySelectorAll('form > fieldset > fieldset').length;
+        var template = document.querySelector('form > fieldset > span')
+                .getAttribute('data-template')
+                .replace(/__index__/g, count);
+        var elNew = document.createElement('div');
+        elNew.innerHTML = template;
+        el.parentNode.parentNode.appendChild(elNew.childNodes.item(0));
+        jQuery('.selectpicker').selectpicker('refresh');
+    }
+    
+    function onChangeCourseUpdateTutorSelect(el) {
+        var formData = new FormData();
+        formData.append('courseId', el.value);
+        formData.append('role', 'Rbac\\\Role\\\Tutor');
+        fetch('{$this->url('course/json/user-by-course-id-and-user-role')}', {
+            method: "POST",
+            body: formData,
+            credentials: 'include'
+        })
+        .then(function(response) {
+            return response.json();
+        })
+        .then(function(json) {
+            var tutorElName = el.name.replace('[course]', '[tutor]');
+            var tutorEl = document.getElementsByName(tutorElName)[0];
+            tutorEl.innerHTML = '';
+            for (var id in json) {
+                if (!json.hasOwnProperty(id)) {
+                    continue;
+                }
+                
+                var option = document.createElement('option');
+                option.value = json[id].id;
+                option.text = json[id].text;
+                tutorEl.appendChild(option);
+            }
+            jQuery('.selectpicker').selectpicker('refresh');
+            onChangeCourseUpdateCertificatePrintFree(el);
+        })
+    }
+    function onChangeCourseUpdateUnlimitedExam(el) {
+        var formData = new FormData();
+        formData.append('courseId', el.value);
+        formData.append('studentId', jQuery('input[name=id]').val());
+		formData.append('name', el.name);
+        fetch('{$this->url('exam/json/examtries')}', {
+            method: "POST",
+            body: formData,
+            credentials: 'include'
+        })
+        .then(function(response) {
+            return response.json();
+        })
+		.then(function(json) {
+			var myJSON = JSON.stringify(json);
+			jQuery(el).parent().parent().parent().find('.lastbutton').after(json.htmloutput);
+        })
+    }
+	function onChangeCourseUpdateMessageTutor(el) {
+        var formData = new FormData();
+        formData.append('courseId', el.value);
+        formData.append('studentId', jQuery('input[name=id]').val());
+		formData.append('name', el.name);
+        fetch('{$this->url('exclusive/json/messagetutor')}', {
+            method: "POST",
+            body: formData,
+            credentials: 'include'
+        })
+        .then(function(response) {
+            return response.json();
+        })
+		.then(function(json) {
+			var myJSON = JSON.stringify(json);
+			jQuery(el).parent().parent().parent().find('.lastbutton').after(json.htmloutput);
+			onChangeCourseUpdateUnlimitedExam(el);	
+        })
+    }
+    function onChangeCourseUpdateCertificatePrintFree(el) {
+        var formData = new FormData();
+        formData.append('courseId', el.value);
+        formData.append('studentId', jQuery('input[name=id]').val());
+		formData.append('name', el.name);
+        fetch('{$this->url('exclusive/json/certificateprintfree')}', {
+            method: "POST",
+            body: formData,
+            credentials: 'include'
+        })
+        .then(function(response) {
+            return response.json();
+        })
+		.then(function(json) {
+			var myJSON = JSON.stringify(json);
+			jQuery(el).parent().parent().parent().find('.lastbutton').nextAll('.checkbox-toggle').remove();
+			jQuery(el).parent().parent().parent().find('.lastbutton').after(json.htmloutput);
+			onChangeCourseUpdateMessageTutor(el);
+        })
+    }
+    
+    function generatePassword() {
+        var length = 8,
+            charset = "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789",
+            retVal = "";
+        for (var i = 0, n = charset.length; i < length; ++i) {
+            retVal += charset.charAt(Math.floor(Math.random() * n));
+        }
+        return retVal;
+    }
+    (function ( $ ) {
+        $(document).on('click', 'button[name="assign-username"]', function(e) {
+            e.preventDefault();
+            var fname = $('input[name="meta[first_name]"]').val().toLowerCase();
+            fname = fname.split("-");
+            fname = fname[0];
+            fname = fname.split(" ");
+            fname = fname[0];
+            var lname = $('input[name="meta[last_name]"]').val().toLowerCase();
+            lname = lname.split("-");
+            lname = lname[0];
+            lname = lname.split(" ");
+            lname = lname[0];
+            var username = fname + lname;
+            if ('' != username) {
+                var today = new Date();
+                var day = today.getDate();
+                var month = today.getMonth();
+                if (day < 10) { 
+                    day = '0' + day 
+                }
+                month = month + 1;
+                if (month < 10) { 
+                    month = '0' + month 
+                }
+                username = username + day + month;
+                $('input[name="username"]').val(username);   
+            }
+        });
+        $(document).on('click', 'button[name="assign-password"]', function(e) {
+            e.preventDefault();
+            $('input[name="password"]').val(generatePassword());   
+        });
+        $(document).on('click', 'button[name="assign-pin"]', function(e) {
+            e.preventDefault();
+            $('input[name="pin"]').val(generatePassword());   
+        });
+        
+        var plainpin = $('input[name="plainpin"]').val();
+        if ('' != plainpin) {
+            $('input[name="pin"]').val(plainpin);
+        }
+
+        $(document).on('change', 'select.selectpicker', function() {
+            $('.bootstrap-select').removeClass('open');
+        });
+        
+        $(document).ready(function() {
+			
+			jQuery('.lastbutton').each(function() {
+				var valExamTries = jQuery(this).nextAll(".examtriesInput").find("input").val();
+				var valMessageTutor = jQuery(this).nextAll(".messagetutorInput").find("input").val();
+				var valCertificatePrintFree = jQuery(this).nextAll(".certificateprintfreeInput").find("input").val();
+				if (valExamTries && valMessageTutor && valCertificatePrintFree) {
+					jQuery(this).nextAll('.examtriesInput, .messagetutorInput, .certificateprintfreeInput').contents()
+						.filter(function() {
+						return this.nodeType == 3; //Node.TEXT_NODE
+					}).remove();
+					var htmlExamTries = jQuery(this).nextAll('.examtriesInput').html();
+					var htmlMessageTutor = jQuery(this).nextAll('.messagetutorInput').html();
+					var htmlCertificatePrintFree = jQuery(this).nextAll('.certificateprintfreeInput').html();
+					jQuery(this).nextAll('.examtriesInput, .messagetutorInput, .certificateprintfreeInput').remove();
+					jQuery(this).after('<div class="checkbox-toggle mt-2 mb-3">'+htmlExamTries+'<label for="check-toggle-'+valExamTries+'">Unlimited Exam Attempt</label></div><div class="checkbox-toggle mt-2 mb-3">'+htmlMessageTutor+'<label for="messagetutor-toggle-'+valMessageTutor+'">Disallow Tutor Messaging</label></div><div class="checkbox-toggle mt-2 mb-3">'+htmlCertificatePrintFree+'<label for="certificateprintfree-toggle-'+valCertificatePrintFree+'">Free Print Certificate</label></div>');
+				}
+			});
+
+		});
+    })(jQuery);
+JS;
+$this->inlineScript()->captureEnd();

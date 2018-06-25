@@ -1,0 +1,173 @@
+<?php
+/**
+ * @var Assignment\Model\AssignmentWork $assignmentWork
+ * @var Assignment\Model\AssignmentWork[] $assignmentWorkResultSet
+ * @var User\Model\User $tutor
+ */
+$assignmentWorkResultSet = $this->assignmentWorkResultSet ?? [];
+
+$this->headLink()
+    ->prependStylesheet('/dist/startui/css/custom.css')
+    ->prependStylesheet('/dist/startui/css/main.css')
+    ->prependStylesheet('/dist/startui/css/lib/bootstrap/bootstrap.min.css')
+    ->prependStylesheet('/dist/startui/css/lib/font-awesome/font-awesome.min.css')
+    ->prependStylesheet('/dist/startui/css/separate/vendor/datatables-net.min.css')
+    ->prependStylesheet('/dist/startui/css/lib/datatables-net/datatables.min.css');
+$this->inlineScript()
+    ->prependFile('/dist/startui/js/app.js')
+    ->prependFile('/dist/startui/js/lib/datatables-net/datatables.min.js')
+    ->prependFile('/dist/startui/js/plugins.js')
+    ->prependFile('/dist/startui/js/lib/bootstrap/bootstrap.min.js')
+    ->prependFile('/dist/startui/js/lib/tether/tether.min.js')
+    ->prependFile('/dist/startui/js/lib/jquery/jquery.min.js');
+$this->headTitle('Student Work');
+//$this->placeholder('bodyClass')->set('with-side-menu-addl-full');
+?>
+
+<?php
+$this->inlineScript()->captureStart();
+echo <<<JS
+    (function ($) {
+        $('#assignment-table').DataTable({'aaSorting': []});
+    })(jQuery);
+JS;
+$this->inlineScript()->captureEnd();
+?>
+<!--
+<nav class="side-menu-addl">
+    <ul class="side-menu-addl-list">
+        <li>
+            <a href="<?php echo $this->url($this->matchedRouteName, ['filter' => 'all']); ?>">
+                <span class="tbl-row"><span class="tbl-cell tbl-cell-caption">All</span></span>
+            </a>
+        </li>
+        <li>
+            <a href="<?php echo $this->url($this->matchedRouteName, ['filter' => 'marked']); ?>">
+                <span class="tbl-row"><span class="tbl-cell tbl-cell-caption">Marked</span></span>
+            </a>
+        </li>
+        <li>
+            <a href="<?php echo $this->url($this->matchedRouteName, ['filter' => 'passed']); ?>">
+                <span class="tbl-row"><span class="tbl-cell tbl-cell-caption">Passed</span></span>
+            </a>
+        </li>
+        <li>
+            <a href="<?php echo $this->url($this->matchedRouteName, ['filter' => 'failed']); ?>">
+                <span class="tbl-row"><span class="tbl-cell tbl-cell-caption">Referred</span></span>
+            </a>
+        </li>
+        <li>
+            <a href="<?php echo $this->url($this->matchedRouteName, ['filter' => 'due']); ?>">
+                <span class="tbl-row"><span class="tbl-cell tbl-cell-caption">Due</span></span>
+            </a>
+        </li>
+        <li>
+            <a href="<?php echo $this->url($this->matchedRouteName, ['filter' => 'overdue']); ?>">
+                <span class="tbl-row"><span class="tbl-cell tbl-cell-caption">Overdue</span></span>
+            </a>
+        </li>
+        <li>
+            <a href="<?php echo $this->url($this->matchedRouteName, ['filter' => 'overdue-marked']); ?>">
+                <span class="tbl-row"><span class="tbl-cell tbl-cell-caption">Overdue Marked</span></span>
+            </a>
+        </li>
+    </ul>
+</nav>
+-->
+<div class="page-content <?php if($this->login()['userChainCount'] >0 ) { echo "padding-zero"; } ?>">
+    <div class="container-fluid">
+        <section class="card">
+            <div class="card-block">
+                <?php if (count($assignmentWorkResultSet) > 0) { ?>
+                    <?php if ($this->isAdmin) { ?>
+                    <br>
+                    <form action="<?php echo $this->url(); ?>" method="GET">
+                        <select name="tutor" class="form-control" onchange="this.form.submit()">
+                            <option value=""></option>
+                            <?php foreach ($this->tutorResultSet as $tutor) { ?>
+                                <option value="<?php echo $tutor->getId(); ?>" <?php
+                                echo $tutor->getId() === $this->selectedTutor ? 'selected' : ''; ?>>
+                                    <?php
+                                    $first_name = $last_name = '';
+                                    if (isset($this->tutorsMeta[$tutor->getId()]) && is_array($tutorsMeta[$tutor->getId()])) {
+                                        foreach($tutorsMeta[$tutor->getId()] as $userMeta) {
+                                            if ('first_name' == $userMeta['name']) {
+                                                $first_name = $userMeta['value'];
+                                            } elseif ('last_name' == $userMeta['name']) {
+                                                $last_name = $userMeta['value'];
+                                            }
+                                        }
+                                    }
+                                    echo $first_name . ' ' . $last_name;
+                                    ?>
+                                </option>
+                            <?php } ?>
+                        </select>
+                    </form>
+                    <?php } ?>
+                    <br>
+                    <table id="assignment-table" class="display table table-striped table-bordered" cellspacing="0" width="100%">
+                        <thead>
+                        <tr>
+                            <th>Student Name</th>
+                            <th>Course Title</th>
+                            <th>Module Title</th>
+                            <th>Status</th>
+                            <th>Submission Date</th>
+                            <th>Marking Days Left</th>
+                            <?php if (!$this->isAdmin) { ?>
+                                <th>Action</th>
+                            <?php } ?>
+                        </tr>
+                        </thead>
+                        <tfoot>
+                        <tr>
+                            <th>Student Name</th>
+                            <th>Course Title</th>
+                            <th>Module Title</th>
+                            <th>Status</th>
+                            <th>Submission Date</th>
+                            <th>Marking Days Left</th>
+                            <?php if (!$this->isAdmin) { ?>
+                                <th>Action</th>
+                            <?php } ?>
+                        </tr>
+                        </tfoot>
+                        <tbody>
+                        <?php foreach ($assignmentWorkResultSet as $assignmentWork) : ?>
+                            <tr>
+                                <td>
+                                    <a href="<?php echo $this->url('student/user/view/single', ['id' => $assignmentWork->worker()->getId()]); ?>">
+                                        <?php echo $assignmentWork->worker()->getFirstName() . ' ' . $assignmentWork->worker()->getLastName(); ?>
+                                    </a>
+                                </td>
+                                <td><?php echo $assignmentWork->course()->getName(); ?></td>
+                                <td><?php echo $assignmentWork->topic()->getName(); ?></td>
+                                <td><?php
+                                    if ($assignmentWork->isWaitingToPass()) {
+                                        echo 'Not Marked';
+                                    } else if ($assignmentWork->didNotPass()) {
+                                        echo 'Referred ' . $assignmentWork->updatedAt()->format('F j, Y, g:i a');
+                                    } else if ($assignmentWork->hasPassed()) {
+                                        echo 'Passed ' . $assignmentWork->updatedAt()->format('F j, Y, g:i a');
+                                    }
+                                    ?></td>
+                                <td><?php echo $assignmentWork->createdAt()->format('F j, Y, g:i a'); ?></td>
+                                <td><?php echo $assignmentWork->markingDaysLeft(); ?></td>
+                                <?php if (!$this->isAdmin) { ?>
+                                    <td>
+                                        <a class="btn btn-inline btn-secondary" href="<?php echo $this->url('tutor/assignment/view/work/single', ['id' => $assignmentWork->getId()]); ?>">Edit</a>
+                                    </td>
+                                <?php } ?>
+                            </tr>
+                        <?php endforeach; ?>
+                        </tbody>
+                    </table>
+                <?php } else { ?>
+                    <br>
+                    <p>No submissions found.</p>
+                <?php } ?>
+            </div>
+        </section>
+    </div><!--.container-fluid-->
+</div><!--.page-content-->
