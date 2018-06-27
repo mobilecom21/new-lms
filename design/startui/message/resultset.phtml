@@ -117,7 +117,24 @@ echo <<<JS
             });
             $('.show-on-click-btn').remove();
         });
+        
     })(jQuery);
+    
+    jQuery(document).ready(function($){
+          if (document.documentElement.clientWidth < 767) { 
+	$('.section-mails-wrap').css("display", "none");
+	$('.close-mailbox').css("display", "block");
+	$('.jspContainer').css('height', '400px');
+	$('.mail-box-work-area-cont').css('height', '400px');
+	$(document).on('click', '.mail-box-item', function(){
+		$('.section-mails-wrap').css("display", "block");
+	});
+	$(document).on('click', '.close-mailbox', function(){
+		$('.section-mails-wrap').css("display", "none");
+	});
+} 
+    });
+    
 JS;
 $this->inlineScript()->captureEnd();
 ?>
@@ -250,8 +267,11 @@ $logged_id = $this->identity()->getId();
                         $last = end($group);
                     ?>
                     <section class="mail-box-work-area mail-box-work-area-<?php echo $key; ?> <?php if ($i > 0) { echo 'hidden'; } ?>">
+                        
                         <div class="mail-box-work-area-in">
                             <div class="mail-box-work-area-cont  scrollable-block">
+                                <div class="extra-space"></div>
+                                <div class="mailbox-close-btn"><span class="close-mailbox" style="display:none;">x</span></div>
                                 <?php $j = 1; ?>
                                 <?php foreach ($group as $message) { ?>
                                     <?php
@@ -260,6 +280,7 @@ $logged_id = $this->identity()->getId();
                                             $extra_class = 'unviewed';
                                         }
                                     ?>
+                                    
                                     <div class="mail-box-letter-item <?php if ($j > 3) { echo 'show-on-click'; } ?> <?php echo $extra_class; ?>" data-group="<?php echo $key; ?>" data-id="<?php echo $message['id']; ?>">
                                         <div class="mail-box-letter-item-in">
                                             <div class="mail-box-letter-item-photo">
