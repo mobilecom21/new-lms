@@ -1,3 +1,5 @@
+/******************/
+/*****************/
 .topic-row {
     margin-top: 5px;
     margin-bottom: 5px;
@@ -122,4 +124,151 @@ textarea[name="meta[address]"] {
 
 .breadcrumb-text {
     color: #00a8ff;
+}
+
+#customer > .row > .box-typical {
+    margin-left: 15px;
+}
+#customer > .row > .selected {
+    border-color: #00a8ff;
+    background-color: #e4f5fe;
+}
+#customer > .row > .box-typical > label> input {
+    margin-left: 5px;
+    margin-right: 10px;
+    margin-top: 15px;
+}
+#customer > .row > .box-typical > label > span {
+    font-weight: 600;
+}
+#customer > .row > .box-typical > label > .recommended {
+    margin-left: 30px;
+}
+#customer > .row > .box-typical > label > .first {
+    vertical-align: middle;
+}
+#customer > .box-typical {
+    padding-top: 40px;
+    padding-bottom: 0;
+    padding-left: 20px;
+    padding-right: 25px;
+}
+#customer > .box-typical > .row > label {
+    background: #2da2fc;
+    padding: 12px;
+    color: white;
+}
+#customer > .box-typical > .credit_type > label {
+    margin-top: -25px;
+    margin-bottom: 25px;
+}
+#customer > .box-typical > .row > .selected {
+    background: #248BD6;
+}
+#customer > .box-typical > hr {
+    margin-left: -20px;
+    margin-right: -25px;
+    margin-bottom: 5px;
+}
+#customer > .box-typical > .form-group {
+    text-align: center;
+    margin-bottom: 5px;
+}
+#customer > .box-typical > .table {
+    margin-bottom: 10px;
+    border: 2px solid #000;
+}
+#customer > .box-typical > .table > tbody > .row {
+    display: table-row;
+    vertical-align: inherit;
+    border-color: inherit;
+}
+#customer > .box-typical > .table > tbody > .row > .cell {
+    display: table-cell;
+    vertical-align: middle;
+    border-top-color: #d8e2e7;
+    padding: 11px 10px 10px;
+    border: 1px solid #eceeef;
+}
+#customer > .box-typical > .table > tbody > tr > td > input {
+    border: none;
+    width: 100%;
+}
+#customer > .box-typical > .table > tbody > .row > .cell > input {
+    border: none;
+    width: 100%;
+}
+#customer > .box-typical > .table > tbody > tr > td > .fa-plus-circle {
+    cursor: pointer;
+    font-size: 1.4em;
+    color: red;
+}
+#customer > .box-typical > .table > tbody > .row > .cell > .fa-minus-circle {
+    cursor: pointer;
+    font-size: 1.4em;
+    color: blue;
+}
+
+/*********custom responsive css*********/
+@media only screen and (max-width: 767px) {
+.mail-box-list.scrollable-block.mails.jspScrollable{
+	width:100% !important;
+}	
+.mail-box-work-area {
+	float: left !important;
+	width: 100% !important;
+	margin-left: 0px !important;
+	position: absolute !important;
+	background-color: #eceff4;
+	left: 0;
+	top: 0px !important;
+	height: 100% !important;
+}
+.mail-box-work-area .mail-box-work-area-in {
+	margin-left: 0px !important;
+}
+.close-mailbox {
+	border: 1px solid #000;
+	float: right;
+	border-radius: 50%;
+	position: absolute;
+	top: 50px;
+	right: 0;
+	padding: 0px 8px;
+	margin-bottom: 14px !important;
+	font-size: 17px;
+	cursor: pointer;
+	margin-right: 13px !important;
+}
+
+.mail-box-work-area-in .scrollable-block {
+height: 400px !important;
+}
+.mail-box-list {
+
+	width: 100% !important;
+
+}
+ /* .mail-box-letter-item {  */
+	 /* padding-top:100px !important; */
+	 /* padding-bottom:100px !important; */
+ /* }  */
+ 
+.close-mailbox {
+cursor: pointer;
+}
+.mail-box-item {
+cursor: pointer;
+}
+.mail-box-list .mail-box-letter-item-txt {
+	display: none !important;
+}
+.extra-space {
+	height: 80px !important;
+}
+.note-editable.panel-body {
+    height: 100px !important;
+}
+
+
 }
